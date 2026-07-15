@@ -22,6 +22,28 @@ DATA_FILES = {
     "39": "대전_충청권_음식점.json",
 }
 
+SERVICE_AREA_BOUNDS = {
+    "min_latitude": 35.8,
+    "max_latitude": 37.3,
+    "min_longitude": 126.0,
+    "max_longitude": 128.5,
+}
+
+def is_in_service_area(
+    latitude: float,
+    longitude: float,
+) -> bool:
+    """좌표가 대전·충청권 서비스 경계 안에 있는지 확인한다."""
+
+    return (
+        SERVICE_AREA_BOUNDS["min_latitude"]
+        <= latitude
+        <= SERVICE_AREA_BOUNDS["max_latitude"]
+        and SERVICE_AREA_BOUNDS["min_longitude"]
+        <= longitude
+        <= SERVICE_AREA_BOUNDS["max_longitude"]
+    )
+
 
 def load_dataset(file_name: str) -> TourApiDataset:
     """공공데이터 JSON 파일 하나를 읽고 원본 스키마로 검증한다."""
@@ -60,6 +82,12 @@ def normalize_place(
         longitude = float(item.mapx)
         latitude = float(item.mapy)
     except (TypeError, ValueError):
+        return None
+
+    if not is_in_service_area(
+        latitude=latitude,
+        longitude=longitude,
+    ):
         return None
 
     address = " ".join(
