@@ -4,6 +4,7 @@
   <header>
     <nav>
       <RouterLink to="/">홈</RouterLink>
+      <RouterLink to="/map">지도</RouterLink>
       <RouterLink to="/community">커뮤니티</RouterLink>
     </nav>
   </header>
