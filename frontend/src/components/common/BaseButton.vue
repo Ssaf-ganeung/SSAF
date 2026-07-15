@@ -3,7 +3,7 @@ defineProps({
   variant: {
     type: String,
     default: 'primary',
-    validator: (value) => ['primary', 'secondary', 'danger-outline'].includes(value),
+    validator: (value) => ['primary', 'secondary', 'danger-outline', 'dark'].includes(value),
   },
 })
 </script>
@@ -62,5 +62,16 @@ defineProps({
 .base-button--danger-outline:hover:not(:disabled) {
   background: var(--color-danger);
   color: var(--color-surface);
+}
+
+.base-button--dark {
+  border: 1px solid var(--color-button-dark);
+  background: var(--color-button-dark);
+  color: var(--color-surface);
+}
+
+.base-button--dark:hover:not(:disabled) {
+  background: var(--color-button-dark-hover);
+  border-color: var(--color-button-dark-hover);
 }
 </style>

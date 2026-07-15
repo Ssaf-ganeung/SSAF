@@ -1,9 +1,9 @@
 import client from './client'
+import { ALL_CATEGORY } from '../constants/postCategories'
 
-// TODO: 백엔드 게시글 CRUD 라우터 구현 후 엔드포인트 연동
-
-export function fetchPosts() {
-  return client.get('/api/posts')
+export function fetchPosts({ category } = {}) {
+  const params = category && category !== ALL_CATEGORY ? { category } : {}
+  return client.get('/api/posts', { params })
 }
 
 export function fetchPost(id) {

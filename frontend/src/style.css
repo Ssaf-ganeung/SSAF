@@ -12,6 +12,9 @@
   --color-border: #e3e5e7;
   --color-bg: #f8f9f9;
   --color-surface: #ffffff;
+  --color-table-header-bg: #f9fafb;
+  --color-button-dark: #111827;
+  --color-button-dark-hover: #030712;
 
   /* Typography */
   --font-sans: 'PretendardVariable', Pretendard, system-ui, 'Segoe UI', Roboto, sans-serif;
