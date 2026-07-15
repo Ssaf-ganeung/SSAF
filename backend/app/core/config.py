@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
     DATABASE_URL: str = "sqlite:///./app.db"
     CORS_ORIGINS: str = "http://localhost:5173"
 
