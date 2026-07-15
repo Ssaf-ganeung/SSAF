@@ -104,9 +104,10 @@ Pinia는 플로팅 챗봇 상태 유지에 사용한다.
 - 실제 CRUD 요청 처리
 - 실제 챗봇 요청 처리
 - 복잡한 폼 검증
-- 디자인 시스템
 - CSS 프레임워크
 - 배포 설정
+
+`components/common/`(AppHeader, AppFooter, BaseButton, Pagination)에 한해 디자인 토큰(`src/style.css`의 CSS 커스텀 프로퍼티)과 Pretendard 폰트를 적용했다. Tailwind 등 CSS 프레임워크는 여전히 설치하지 않았고, `components/community/`·`components/chat/` 등 나머지 컴포넌트의 스타일링은 아직 범위 밖이다.
 
 ## 10. 응답 및 오류 처리
 
