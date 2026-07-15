@@ -2,7 +2,11 @@
 from openai import OpenAI
 
 from app.core.config import settings
+from app.schemas.chat import ChatMessage
 from app.services.place_data import search_places, format_context
+
+# OpenAI에 보낼 대화 히스토리 최대 길이 (토큰/비용 폭주 방지)
+MAX_HISTORY = 12
 
 # 챗봇의 정체성/말투를 정하는 지시문.
 SYSTEM_PROMPT = (
@@ -36,18 +40,24 @@ def _build_system_prompt(message: str) -> str:
     )
 
 
-def generate_reply(message: str) -> str:
-    """사용자 메시지 한 개를 받아 OpenAI 응답 텍스트를 돌려준다."""
+def generate_reply(messages: list[ChatMessage]) -> str:
+    """대화 히스토리 전체를 받아 OpenAI 응답 텍스트를 돌려준다."""
     if not settings.OPENAI_API_KEY:
         return "(OpenAI API 키가 없습니다. backend/.env 의 OPENAI_API_KEY 를 채워주세요.)"
+    if not messages:
+        return "무엇이 궁금하신가요?"
+
+    # 검색(RAG)은 가장 최근 사용자 메시지 기준으로 수행
+    last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+    system_prompt = _build_system_prompt(last_user)
+
+    # 최근 MAX_HISTORY개만 잘라서 맥락 유지 (오래된 대화는 버림)
+    history = [{"role": m.role, "content": m.content} for m in messages[-MAX_HISTORY:]]
 
     try:
         completion = _get_client().chat.completions.create(
             model=settings.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": _build_system_prompt(message)},
-                {"role": "user", "content": message},
-            ],
+            messages=[{"role": "system", "content": system_prompt}, *history],
         )
         return completion.choices[0].message.content or ""
     except Exception as exc:  # 네트워크/키/쿼터 오류 등

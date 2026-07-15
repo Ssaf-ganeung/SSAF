@@ -9,8 +9,8 @@ router = APIRouter(prefix="/api", tags=["chat"])
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest) -> ChatResponse:
-    # 3단계: 관련 지역 데이터를 검색해 근거로 넣은 뒤 OpenAI가 답변(RAG).
-    reply = generate_reply(payload.message)
+    # 4단계: 대화 히스토리 전체를 넘겨 맥락을 유지하며 답변(RAG + 멀티턴).
+    reply = generate_reply(payload.messages)
     return ChatResponse(reply=reply)
 
 
