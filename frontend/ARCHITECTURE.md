@@ -19,7 +19,7 @@
 - Pinia
 - Axios
 
-TypeScript와 CSS 프레임워크는 사용하지 않는다.
+TypeScript와 CSS 프레임워크(Tailwind 등)는 사용하지 않는다. 디자인 토큰은 `src/style.css`의 순수 CSS 커스텀 프로퍼티로 관리한다.
 
 ## 3. 디렉터리 구조
 
@@ -49,7 +49,9 @@ frontend/
     ├── components/
     │   ├── common/
     │   │   ├── AppHeader.vue
-    │   │   └── AppFooter.vue
+    │   │   ├── AppFooter.vue
+    │   │   ├── BaseButton.vue
+    │   │   └── Pagination.vue
     │   ├── community/
     │   │   ├── PostCard.vue
     │   │   ├── PostForm.vue
@@ -234,6 +236,7 @@ http://localhost:5173
 - 챗봇 API 연동
 - 폼 유효성 검사
 - 공통 로딩·오류 컴포넌트
-- CSS 프레임워크 적용
 - 반응형 디자인
 - Netlify 배포 설정
+
+`components/common/`(AppHeader, AppFooter, BaseButton, Pagination)의 디자인 토큰 적용은 완료됨. `components/community/`, `components/chat/` 등 나머지 컴포넌트는 아직 토큰을 적용하지 않았다(챗봇 컴포넌트는 `#2f6fed`를 여전히 하드코딩 중).
