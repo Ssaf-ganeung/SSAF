@@ -6,7 +6,6 @@ from app.core.config import settings
 from app.db.database import Base, engine
 from app.models.post import Post  # noqa: F401 (Base.metadata 등록을 위해 import)
 from app.routers import post as post_router
-=======
 from app.routers import chat
 
 app = FastAPI(title="ssaf API")
