@@ -8,8 +8,8 @@ const chatStore = useChatStore()
 
 async function handleSend(text) {
   chatStore.addMessage('user', text)
-  // TODO: 백엔드 /api/chat 구현 후 실제 응답으로 교체
-  const response = await sendChatMessage(text)
+  // 방금 추가한 사용자 메시지를 포함한 대화 전체를 전송(맥락 유지)
+  const response = await sendChatMessage(chatStore.messages)
   chatStore.addMessage('assistant', response.data?.reply ?? '')
 }
 </script>

@@ -1,7 +1,7 @@
 import client from './client'
 
-// TODO: 백엔드 POST /api/chat 구현 후 연동
-
-export function sendChatMessage(message) {
-  return client.post('/api/chat', { message })
+// 대화 히스토리 전체(messages 배열)를 백엔드로 전송한다.
+// messages: [{ role: 'user' | 'assistant', content: string }, ...]
+export function sendChatMessage(messages) {
+  return client.post('/api/chat', { messages })
 }
