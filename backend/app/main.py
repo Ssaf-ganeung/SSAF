@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.routers import chat
 
 app = FastAPI(title="ssaf API")
 
@@ -13,7 +14,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# TODO: app.routers.* 구현 후 여기서 include_router
+app.include_router(chat.router)
 
 
 @app.get("/")
