@@ -2,20 +2,24 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.models.post import PostCategory
+
 
 class PostCreate(BaseModel):
     """게시글 작성 요청 바디."""
 
     title: str
     content: str
+    category: PostCategory
     password: str
 
 
 class PostUpdate(BaseModel):
-    """게시글 수정 요청 바디. PUT은 title/content 전체 교체이므로 Create와 필드가 같다."""
+    """게시글 수정 요청 바디. PUT은 title/content/category 전체 교체이므로 Create와 필드가 같다."""
 
     title: str
     content: str
+    category: PostCategory
     password: str
 
 
@@ -33,5 +37,6 @@ class PostResponse(BaseModel):
     id: int
     title: str
     content: str
+    category: PostCategory
     created_at: datetime
     updated_at: datetime | None
