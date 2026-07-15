@@ -89,28 +89,15 @@ function formatDate(value) {
 </template>
 
 <style scoped>
-/* 컴포넌트 자체 디자인 변수 (나중에 전역 토큰으로 이관하기 쉽게 여기 모음) */
+/* 색상·폰트는 전역 style.css 토큰(--color-*, --font-* )을 사용 */
 .home {
-  --primary: #1d4ed8;
-  --primary-hover: #1e3a8a;
-  --primary-light: #e4edfd;
-  --text: #111827;
-  --text-secondary: #6b7280;
-  --border: #e5e7eb;
-  --surface: #ffffff;
   text-align: left;
-  color: var(--text);
-  font-family: 'NanumSquare', system-ui, sans-serif;
-}
-
-/* 전역 style.css의 h1/h2 폰트 지정을 이겨서 홈 제목도 나눔스퀘어 상속 */
-.home :where(h1, h2, h3) {
-  font-family: inherit;
+  color: var(--color-text);
 }
 
 /* 히어로 배너 */
 .hero {
-  background: var(--primary-light);
+  background: var(--color-primary-light);
   min-height: 180px;
   display: flex;
   flex-direction: column;
@@ -121,13 +108,13 @@ function formatDate(value) {
   text-align: center;
 }
 .hero__title {
-  font-size: 28px;
+  font-size: var(--font-size-h1);
   font-weight: 600;
-  color: var(--primary);
+  color: var(--color-primary);
 }
 .hero__subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
 }
 
 /* 콘텐츠 컨테이너 */
@@ -141,7 +128,7 @@ function formatDate(value) {
 }
 
 .section__title {
-  font-size: 18px;
+  font-size: var(--font-size-h3);
   font-weight: 600;
 }
 .section__head {
@@ -150,11 +137,11 @@ function formatDate(value) {
   justify-content: space-between;
 }
 .section__more {
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
 }
 .section__more:hover {
-  color: var(--primary);
+  color: var(--color-primary);
 }
 
 /* 카테고리 카드 3개 */
@@ -170,16 +157,16 @@ function formatDate(value) {
   align-items: center;
   gap: 12px;
   padding: 28px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  color: var(--text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
   text-decoration: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .category-card:hover {
-  border-color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card);
 }
 .category-card__icon {
   width: 72px;
@@ -188,11 +175,11 @@ function formatDate(value) {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--primary-light);
+  background: var(--color-primary-light);
   font-size: 36px;
 }
 .category-card__label {
-  font-size: 16px;
+  font-size: var(--font-size-body);
   font-weight: 500;
 }
 
@@ -208,29 +195,29 @@ function formatDate(value) {
   justify-content: space-between;
   gap: 12px;
   padding: 14px 4px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
 }
 .post-row__title {
-  font-size: 16px;
+  font-size: var(--font-size-body);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 .post-row__title:hover {
-  color: var(--primary);
+  color: var(--color-primary);
 }
 .post-row__date {
   flex-shrink: 0;
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  color: var(--color-text-secondary);
 }
 
 .state {
   margin-top: 16px;
   padding: 32px;
   text-align: center;
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
 }
 
 /* 모바일: 카테고리 세로 스택 */
@@ -243,9 +230,4 @@ function formatDate(value) {
     gap: 32px;
   }
 }
-</style>
-
-<!-- 나눔스퀘어 웹폰트 (Naver, 무료·상업적 이용 가능) — 나중에 전역 style.css로 이관 -->
-<style>
-@import url('https://cdn.jsdelivr.net/gh/moonspam/NanumSquare@1.0/nanumsquare.css');
 </style>
