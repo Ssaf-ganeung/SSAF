@@ -3,7 +3,7 @@ from openai import OpenAI
 
 from app.core.config import settings
 from app.schemas.chat import ChatMessage
-from app.services.place_data import search_places, format_context, resolve_intent
+from app.services.place_data import format_context, resolve_intent, search_places
 
 # OpenAI에 보낼 대화 히스토리 최대 길이 (토큰/비용 폭주 방지)
 MAX_HISTORY = 12
@@ -40,14 +40,9 @@ def _get_client() -> OpenAI:
     return _client
 
 
-def _build_system_prompt(message: str, recent_user_texts: list[str]) -> str:
-    """질문과 관련된 실제 장소를 검색해 시스템 프롬프트에 근거로 덧붙인다(RAG).
-
-    유형·지역은 최근 사용자 메시지들에서 물려받는다. "맛집 추천해줘" 다음의
-    "서구에 있는 거" 처럼 후속 질문만으로는 무엇을 찾는지 알 수 없기 때문.
-    """
-    wanted_type, regions = resolve_intent(recent_user_texts)
-    places = search_places(message, wanted_type=wanted_type, regions=regions)
+def _build_system_prompt(message: str) -> str:
+    """질문과 관련된 실제 장소를 검색해 시스템 프롬프트에 근거로 덧붙인다(RAG)."""
+    places = search_places(message)
     context = format_context(places)
     if not context:
         return SYSTEM_PROMPT
@@ -65,17 +60,19 @@ def _build_system_prompt(message: str, recent_user_texts: list[str]) -> str:
     )
 
 
-def generate_reply(messages: list[ChatMessage]) -> str:
+def generate_reply(
+    messages: list[ChatMessage],
+    places: list[dict] | None = None,
+) -> str:
     """대화 히스토리 전체를 받아 OpenAI 응답 텍스트를 돌려준다."""
     if not settings.OPENAI_API_KEY:
         return "(OpenAI API 키가 없습니다. backend/.env 의 OPENAI_API_KEY 를 채워주세요.)"
     if not messages:
         return "무엇이 궁금하신가요?"
 
-    # 검색(RAG)은 최근 사용자 메시지 기준. 유형·지역 힌트는 직전 질문들에서 물려받는다.
-    recent_user_texts = [m.content for m in reversed(messages) if m.role == "user"][:3]
-    last_user = recent_user_texts[0] if recent_user_texts else ""
-    system_prompt = _build_system_prompt(last_user, recent_user_texts)
+    # 검색(RAG)은 가장 최근 사용자 메시지 기준으로 수행
+    last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
+    system_prompt = _build_system_prompt(last_user)
 
     # 최근 MAX_HISTORY개만 잘라서 맥락 유지 (오래된 대화는 버림)
     history = [{"role": m.role, "content": m.content} for m in messages[-MAX_HISTORY:]]
@@ -90,7 +87,10 @@ def generate_reply(messages: list[ChatMessage]) -> str:
         print(f"[chat_service] OpenAI 호출 실패: {exc}")
         return "죄송해요, 지금 답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요."
 
-def stream_reply(messages: list[ChatMessage]):
+def stream_reply(
+    messages: list[ChatMessage],
+    places: list[dict] | None = None,
+):
     if not settings.OPENAI_API_KEY:
         yield "(OpenAI API 키가 없습니다.)"
         return
@@ -105,7 +105,7 @@ def stream_reply(messages: list[ChatMessage]):
     ][:3]
     last_user = recent_user_texts[0] if recent_user_texts else ""
 
-    system_prompt = _build_system_prompt(last_user, recent_user_texts)
+    system_prompt = _build_system_prompt(last_user)
 
     history = [
         {

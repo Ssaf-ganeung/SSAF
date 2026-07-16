@@ -51,10 +51,13 @@ onBeforeUnmount(onResizeEnd)
 async function handleSend(text) {
   chatStore.addMessage("user", text);
 
-  const requestMessages = chatStore.messages.map(({ role, content }) => ({
-    role,
-    content,
-  }));
+  const requestMessages = chatStore.messages.map(
+    ({ role, content, relatedPlaces }) => ({
+      role,
+      content,
+      related_places: relatedPlaces ?? [],
+    }),
+  );
 
   chatStore.addMessage("assistant", "", []);
   chatStore.setLoading(true);

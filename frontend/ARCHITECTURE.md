@@ -292,9 +292,9 @@ Marker 원본은 `src/assets/map-markers/`에서 관리하고 화면에서는 `3
 
 ## 10. 챗봇 컴포넌트 구성
 
-- `ChatWidget.vue`: 플로팅 버튼과 패널 토글
+- `ChatWidget.vue`: 플로팅 버튼과 패널 토글, 직전 관련 장소를 포함한 대화 요청
 - `ChatWindow.vue`: 전체 대화 렌더링 및 스크롤 영역
-- `ChatMessage.vue`: user/assistant 메시지 말풍선
+- `ChatMessage.vue`: user/assistant 메시지 말풍선과 관련 장소 지도 링크
 - `ChatInput.vue`: 입력창과 전송 버튼
 
 초기 세팅 단계에서는 UI 골격과 TODO만 작성한다.

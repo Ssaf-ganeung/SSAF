@@ -157,6 +157,10 @@ ORM 모델과 외부 API 스키마를 분리하여 비밀번호와 같은 내부
 - `PlaceResponse` 변환
 - 콘텐츠 유형 및 권역 필터
 
+`place_data.py`는 챗봇용 JSON 캐시와 키워드 검색을 담당한다. 직전 추천 장소 ID를 후속 질문에 재사용하며, `가까운`, `근처`, `주변` 질문은 좌표 간 Haversine 직선거리로 정렬한다.
+
+`chat_service.py`는 검색 결과를 답변 근거로 사용하고 OpenAI 답변을 일반 응답 또는 SSE 스트림으로 생성한다. 답변 근거와 프론트 지도 링크는 동일한 장소 목록을 사용한다.
+
 공공데이터는 DB CRUD가 아니므로 `app/crud`가 아닌 `app/services`에서 처리한다.
 
 ### `app/routers`
@@ -172,6 +176,8 @@ FastAPI `APIRouter` 기반 엔드포인트를 정의한다.
 ```
 
 장소 라우터는 `content_type_id`와 `region` 쿼리 파라미터를 검증하고 장소 서비스에 조회를 위임한다.
+
+챗봇 라우터는 일반 `POST /api/chat`, 스트리밍 `POST /api/chat/stream`, 검색 점검용 `GET /api/chat/search`를 제공한다.
 
 ### `app/main.py`
 
