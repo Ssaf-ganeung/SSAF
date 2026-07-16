@@ -20,11 +20,11 @@ defineProps({
   word-break: break-word;
 }
 
-/* 사용자 말풍선: 오른쪽, 파란색 */
+/* 사용자 말풍선: 오른쪽, 헤더(#408a5c)에 흰색을 섞은 연한 초록 */
 .chat-message.user {
   align-self: flex-end;
-  background: #2f6fed;
-  color: #fff;
+  background: #8cb99d;
+  color: #1a1a1a;
   border-bottom-right-radius: 2px;
 }
 
