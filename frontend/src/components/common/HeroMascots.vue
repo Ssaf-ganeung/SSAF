@@ -1,12 +1,12 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import ggumdori from '../../assets/Deajeon_mascots/꿈돌이.png'
-import first from '../../assets/Deajeon_mascots/첫째.png'
-import second from '../../assets/Deajeon_mascots/둘째.png'
-import third from '../../assets/Deajeon_mascots/셋째.png'
-import maknaeng from '../../assets/Deajeon_mascots/막냉이.png'
-import ganadi from '../../assets/Deajeon_mascots/가나디.png'
-import nev from '../../assets/Deajeon_mascots/네브.png'
+import ggumdori from '../../assets/Daejeon_mascots/ggumdori.png'
+import first from '../../assets/Daejeon_mascots/first.png'
+import second from '../../assets/Daejeon_mascots/second.png'
+import third from '../../assets/Daejeon_mascots/third.png'
+import maknaeng from '../../assets/Daejeon_mascots/maknaeng.png'
+import ganadi from '../../assets/Daejeon_mascots/ganadi.png'
+import nev from '../../assets/Daejeon_mascots/nev.png'
 
 const mascots = [
   { src: ggumdori, name: '꿈돌이' },
