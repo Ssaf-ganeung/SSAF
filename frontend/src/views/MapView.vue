@@ -1,15 +1,24 @@
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref, watch, computed } from "vue";
 
 import { getPlaces } from "../api/places";
+import { useFavorites } from "../composables/useFavorites";
 import LeafletMap from "../components/map/LeafletMap.vue";
 import MapFilter from "../components/map/MapFilter.vue";
+import PlaceDetailPanel from "../components/map/PlaceDetailPanel.vue";
 
 const places = ref([]);
 const selectedContentTypeId = ref("");
 const selectedRegion = ref("");
 const loading = ref(false);
 const error = ref("");
+const selectedPlace = ref(null);
+
+const { favoriteCount, isFavorite, toggleFavorite } = useFavorites();
+
+const favoritePlaces = computed(() =>
+  places.value.filter((place) => isFavorite(place)),
+);
 
 let requestSequence = 0;
 
@@ -27,6 +36,22 @@ function createRequestParams() {
   return params;
 }
 
+function selectPlace(place) {
+  console.log("선택된 장소:", place);
+  selectedPlace.value = place;
+}
+
+function closePlaceDetail() {
+  selectedPlace.value = null;
+}
+
+function isSamePlace(firstPlace, secondPlace) {
+  return (
+    firstPlace.id === secondPlace.id &&
+    firstPlace.content_type_id === secondPlace.content_type_id
+  );
+}
+
 async function fetchPlaces() {
   const currentRequest = ++requestSequence;
 
@@ -41,6 +66,13 @@ async function fetchPlaces() {
     }
 
     places.value = response.data;
+
+    if (
+      selectedPlace.value &&
+      !places.value.some((place) => isSamePlace(place, selectedPlace.value))
+    ) {
+      selectedPlace.value = null;
+    }
   } catch (requestError) {
     if (currentRequest !== requestSequence) {
       return;
@@ -66,6 +98,25 @@ onMounted(fetchPlaces);
       <h1>대전·충청권 지도</h1>
 
       <p>지역 관광 정보를 지도에서 확인하세요.</p>
+      <p class="map-view__favorite-count">즐겨찾기 {{ favoriteCount }}개</p>
+      <div v-if="favoritePlaces.length" class="map-view__favorites">
+        <h2>내 즐겨찾기</h2>
+
+        <button
+          v-for="place in favoritePlaces"
+          :key="`${place.content_type_id}:${place.id}`"
+          type="button"
+          class="map-view__favorite-item"
+          @click="selectPlace(place)"
+        >
+          <span>{{ place.title }}</span>
+          <small>{{ place.region }} · {{ place.content_type }}</small>
+        </button>
+      </div>
+
+      <p v-else class="map-view__favorites-empty">
+        추가한 즐겨찾기가 없습니다.
+      </p>
     </header>
 
     <MapFilter
@@ -88,7 +139,20 @@ onMounted(fetchPlaces);
       선택한 조건에 해당하는 장소가 없습니다.
     </p>
 
-    <LeafletMap v-else :places="places" />
+    <div v-else class="map-view__content">
+      <div class="map-view__map">
+        <LeafletMap :places="places" @select-place="selectPlace" />
+      </div>
+
+      <PlaceDetailPanel
+        v-if="selectedPlace"
+        :place="selectedPlace"
+        :is-favorite="isFavorite(selectedPlace)"
+        class="map-view__detail"
+        @close="closePlaceDetail"
+        @toggle-favorite="toggleFavorite(selectedPlace)"
+      />
+    </div>
   </section>
 </template>
 
@@ -130,9 +194,75 @@ onMounted(fetchPlaces);
   border-radius: 8px;
 }
 
+.map-view__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+.map-view__map {
+  min-width: 0;
+}
+
+.map-view__detail {
+  position: sticky;
+  top: 20px;
+}
+
+@media (max-width: 960px) {
+  .map-view__content {
+    grid-template-columns: 1fr;
+  }
+
+  .map-view__detail {
+    position: static;
+  }
+}
+
 @media (max-width: 768px) {
   .map-view {
     padding: 20px;
   }
+}
+
+.map-view__favorite-count {
+  color: #004346;
+  font-size: 14px;
+  font-weight: 700;
+}
+.map-view__favorites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.map-view__favorites h2 {
+  width: 100%;
+  margin: 0 0 4px;
+  color: #172a3a;
+  font-size: 16px;
+}
+
+.map-view__favorite-item {
+  display: grid;
+  gap: 3px;
+  padding: 8px 12px;
+  color: #172a3a;
+  text-align: left;
+  cursor: pointer;
+  background: rgba(117, 221, 221, 0.2);
+  border: 1px solid #09bc8a;
+  border-radius: 8px;
+}
+
+.map-view__favorite-item small {
+  color: #508991;
+}
+
+.map-view__favorites-empty {
+  color: #508991;
+  font-size: 13px;
 }
 </style>

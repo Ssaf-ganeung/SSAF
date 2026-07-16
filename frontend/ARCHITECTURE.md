@@ -63,7 +63,8 @@ frontend/
     │   │   └── ChatInput.vue
     │   └── map/
     │       ├── LeafletMap.vue
-    │       └── MapFilter.vue
+    │       ├── MapFilter.vue
+    │       └── PlaceDetailPanel.vue
     ├── api/
     │   ├── client.js
     │   ├── posts.js
@@ -176,6 +177,8 @@ MapFilter
 → GET /api/places
 → LeafletMap places props
 → WebP Marker / Popup
+→ select-place event
+→ PlaceDetailPanel
 ```
 
 ### `MapView.vue`
@@ -187,6 +190,8 @@ MapFilter
 - 로딩·오류·빈 결과 상태
 - 필터 변경 시 장소 API 재요청
 - 연속 요청의 응답 순서가 뒤바뀌지 않도록 요청 sequence 관리
+- Marker에서 전달받은 선택 장소 상태 관리
+- 필터 결과에서 선택 장소가 제외되면 상세 패널 닫기
 
 ### `MapFilter.vue`
 
@@ -203,8 +208,20 @@ MapFilter
 - 장소 전체 범위에 `fitBounds()` 적용
 - 컴포넌트 해제 시 Leaflet map 인스턴스 정리
 - Marker 클릭 Popup 렌더링
+- Marker 클릭 시 `select-place` 이벤트 전달
 
 Popup 문자열은 HTML 문자열 결합 대신 DOM `textContent`를 사용한다. 이미지 로딩에 실패하면 이미지 요소만 제거한다.
+
+### `PlaceDetailPanel.vue`
+
+선택한 장소의 확장 정보를 표시한다.
+
+- 데스크톱에서는 지도 우측 패널, 좁은 화면에서는 지도 아래 패널로 배치
+- 대표 이미지와 이미지 누락 상태 표시
+- 콘텐츠 유형, 장소명, 주소, 전화번호, 권역 표시
+- 전화번호가 있으면 `tel:` 링크 제공
+- 카카오맵 위치 보기 및 길찾기 URL 제공
+- 닫기 이벤트를 `MapView`에 전달
 
 ### Marker 리소스
 
