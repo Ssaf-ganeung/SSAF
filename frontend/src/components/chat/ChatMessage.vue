@@ -45,6 +45,8 @@ defineProps({
 
 <style scoped>
 .chat-message {
+  position: relative;
+  z-index: 1; /* 배경에 떠다니는 사진 위에 오도록 */
   max-width: 80%;
   padding: 8px 12px;
   border-radius: 12px;
@@ -54,11 +56,11 @@ defineProps({
   word-break: break-word;
 }
 
-/* 사용자 말풍선: 오른쪽, 파란색 */
+/* 사용자 말풍선: 오른쪽, 헤더(#408a5c)에 흰색을 섞은 연한 초록 */
 .chat-message.user {
   align-self: flex-end;
-  background: #2f6fed;
-  color: #fff;
+  background: #8cb99d;
+  color: #1a1a1a;
   border-bottom-right-radius: 2px;
 }
 

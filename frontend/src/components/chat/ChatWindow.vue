@@ -1,7 +1,8 @@
 <script setup>
-import { ref, watch, nextTick } from "vue";
-import { useChatStore } from "../../stores/chat";
-import ChatMessage from "./ChatMessage.vue";
+import { ref, watch, nextTick } from 'vue'
+import { useChatStore } from '../../stores/chat'
+import ChatMessage from './ChatMessage.vue'
+import FloatingFaces from './FloatingFaces.vue'
 
 const chatStore = useChatStore();
 const scrollRef = ref(null);
@@ -18,6 +19,8 @@ watch(() => [chatStore.messages.length, chatStore.isLoading], scrollToBottom);
 
 <template>
   <div ref="scrollRef" class="chat-window">
+    <FloatingFaces />
+
     <!-- 대화가 없을 때 안내 -->
     <p v-if="chatStore.messages.length === 0" class="chat-window__empty">
       안녕하세요!<br />
@@ -41,6 +44,7 @@ watch(() => [chatStore.messages.length, chatStore.isLoading], scrollToBottom);
 
 <style scoped>
 .chat-window {
+  position: relative; /* 떠다니는 팀원 사진의 배치 기준 */
   flex: 1;
   overflow-y: auto;
   padding: 16px;
@@ -50,9 +54,16 @@ watch(() => [chatStore.messages.length, chatStore.isLoading], scrollToBottom);
   background: #f7f8fa;
 }
 
+/* 대화 내용은 항상 배경 사진 위에 */
+.chat-window__empty,
+.chat-window__typing {
+  position: relative;
+  z-index: 1;
+}
+
 .chat-window__empty {
   margin: auto;
-  color: #888;
+  color: #313030;
   text-align: center;
   font-size: 14px;
 }

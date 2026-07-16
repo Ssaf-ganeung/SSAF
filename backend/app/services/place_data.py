@@ -13,7 +13,8 @@ DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 TYPE_HINTS = {
     "맛집": "음식점", "음식": "음식점", "식당": "음식점", "먹거리": "음식점",
     "축제": "축제공연행사", "행사": "축제공연행사", "공연": "축제공연행사",
-    "숙박": "숙박", "호텔": "숙박", "펜션": "숙박", "모텔": "숙박", "잘": "숙박",
+    "숙박": "숙박", "숙소": "숙박", "호텔": "숙박", "펜션": "숙박", "모텔": "숙박",
+    "리조트": "숙박", "게스트하우스": "숙박", "민박": "숙박", "한옥": "숙박", "잘": "숙박",
     "쇼핑": "쇼핑", "시장": "쇼핑", "마트": "쇼핑",
     "레포츠": "레포츠", "체험": "레포츠", "액티비티": "레포츠",
     "문화": "문화시설", "박물관": "문화시설", "미술관": "문화시설", "전시": "문화시설",
@@ -21,8 +22,22 @@ TYPE_HINTS = {
     "관광": "관광지", "명소": "관광지", "가볼": "관광지",
 }
 
-# 대전·충청권 지역명 (주소 매칭용)
-REGION_WORDS = ["대전", "세종", "계룡", "공주", "논산", "옥천", "충청", "충남", "충북"]
+# 대전·충청권 지역명 (주소 매칭용). 긴 이름이 앞에 와야 "대전 서구"에서 "서구"가 먼저 잡힌다.
+REGION_WORDS = [
+    # 대전 자치구 — 사용자가 "서구", "동구"처럼 구 단위로 묻는 경우가 많다
+    "동구", "중구", "서구", "유성구", "대덕구",
+    # 광역 단위
+    "대전", "세종", "충청", "충남", "충북",
+    # 충남
+    "천안", "공주", "보령", "아산", "서산", "논산", "계룡", "당진",
+    "금산", "부여", "서천", "청양", "홍성", "예산", "태안",
+    # 충북
+    "청주", "충주", "제천", "보은", "옥천", "영동", "증평", "진천",
+    "괴산", "음성", "단양",
+]
+
+# 광역 단위. 구/시/군이 함께 잡히면 이쪽은 버린다(_detect_regions 참고).
+BROAD_REGIONS = {"대전", "세종", "충청", "충남", "충북"}
 
 _places: list[dict] = []
 
@@ -40,7 +55,7 @@ def load_places() -> list[dict]:
         for item in raw.get("items", []):
             places.append({
                 "id": str(item.get("contentid", "")),
-    "content_type_id": str(item.get("contenttypeid", "")),
+                "content_type_id": str(item.get("contenttypeid", "")),
                 "title": item.get("title", ""),
                 "type": content_type,
                 "addr": item.get("addr1", ""),
@@ -60,34 +75,75 @@ def _detect_type(query: str) -> str | None:
     return None
 
 
-def search_places(query: str, limit: int = 8) -> list[dict]:
-    """질문과 관련도가 높은 장소를 점수순으로 상위 limit개 반환."""
+def _detect_regions(query: str) -> list[str]:
+    """질문 속 지역명을 찾되, 구/시/군이 잡히면 광역 단위는 버린다.
+
+    "대전 서구"에서 ["서구", "대전"]을 모두 쓰면 필터가 or 조건이라
+    대전 전역이 통과해 서구 조건이 무의미해진다.
+    """
+    found = [r for r in REGION_WORDS if r in query]
+    specific = [r for r in found if r not in BROAD_REGIONS]
+    return specific or found
+
+
+def resolve_intent(recent_user_texts: list[str]) -> tuple[str | None, list[str]]:
+    """최근 사용자 메시지(최신순)에서 유형·지역 의도를 뽑는다.
+
+    "맛집 추천해줘" → "서구에 있는 거" 처럼 후속 질문에 유형이 빠져도,
+    직전 대화에서 유형을 물려받아 맥락을 유지한다. 최신 메시지가 항상 우선.
+    """
+    wanted_type: str | None = None
+    regions: list[str] = []
+    for text in recent_user_texts:  # 최신 → 과거 순
+        if wanted_type is None:
+            wanted_type = _detect_type(text)
+        if not regions:
+            regions = _detect_regions(text)
+        if wanted_type and regions:
+            break
+    return wanted_type, regions
+
+
+def search_places(
+    query: str,
+    limit: int = 8,
+    wanted_type: str | None = None,
+    regions: list[str] | None = None,
+) -> list[dict]:
+    """질문과 관련도가 높은 장소를 점수순으로 상위 limit개 반환.
+
+    유형·지역이 주어지면 점수가 아니라 '필터'로 쓴다. "서구 맛집"을 물었는데
+    점수만 매기면 다른 구의 장소가 섞여 들어오기 때문이다.
+    """
     places = load_places()
-    wanted_type = _detect_type(query)
-    regions = [r for r in REGION_WORDS if r in query]
+    if wanted_type is None:
+        wanted_type = _detect_type(query)
+    if regions is None:
+        regions = _detect_regions(query)
     # 조사(에서/의 등) 떼고 2글자 이상 토큰만 사용
     tokens = [t.strip(",.?!·")  for t in query.split() if len(t.strip(",.?!·")) >= 2]
 
     scored: list[tuple[int, dict]] = []
     for place in places:
+        # 지역/유형을 지정했으면 해당하지 않는 장소는 아예 제외
+        if regions and not any(r in place["addr"] for r in regions):
+            continue
+        if wanted_type and place["type"] != wanted_type:
+            continue
+
         score = 0
         haystack = f"{place['title']} {place['addr']} {place['type']}"
 
         # 장소 이름이 질문에 직접 등장하면 강한 신호
         if len(place["title"]) >= 2 and place["title"] in query:
             score += 5
-        # 지역명이 주소에 일치
-        if regions and any(r in place["addr"] for r in regions):
-            score += 2
-        # 유형 힌트 일치
-        if wanted_type and place["type"] == wanted_type:
-            score += 2
         # 일반 토큰 겹침
         for token in tokens:
             if token in haystack:
                 score += 1
 
-        if score > 0:
+        # 필터를 통과한 것만 남았으므로, 토큰이 안 겹쳐도 후보로 인정
+        if score > 0 or regions or wanted_type:
             scored.append((score, place))
 
     scored.sort(key=lambda pair: pair[0], reverse=True)
