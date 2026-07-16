@@ -7,6 +7,8 @@ from app.db.database import Base, engine
 from app.models.post import Post  # noqa: F401 (Base.metadata 등록을 위해 import)
 from app.routers import post as post_router
 from app.routers import chat
+from app.routers import place as place_router
+
 
 app = FastAPI(title="ssaf API")
 
@@ -24,6 +26,7 @@ Base.metadata.create_all(bind=engine)
 
 app.include_router(post_router.router)
 app.include_router(chat.router)
+app.include_router(place_router.router)
 
 
 @app.get("/")
