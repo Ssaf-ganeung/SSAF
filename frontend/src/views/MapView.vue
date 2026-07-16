@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref, watch, computed } from "vue";
+import { useRoute } from "vue-router";
 
 import { getPlaces } from "../api/places";
 import { useFavorites } from "../composables/useFavorites";
@@ -7,8 +8,14 @@ import LeafletMap from "../components/map/LeafletMap.vue";
 import MapFilter from "../components/map/MapFilter.vue";
 import PlaceDetailPanel from "../components/map/PlaceDetailPanel.vue";
 
+const route = useRoute();
+
 const places = ref([]);
-const selectedContentTypeId = ref("");
+const selectedContentTypeId = ref(
+  typeof route.query.content_type_id === "string"
+    ? route.query.content_type_id
+    : "",
+);
 const selectedRegion = ref("");
 const loading = ref(false);
 const error = ref("");
@@ -51,6 +58,23 @@ function isSamePlace(firstPlace, secondPlace) {
   );
 }
 
+function selectRequestedPlace() {
+  const requestedPlaceId = route.query.place_id;
+  const requestedContentTypeId = route.query.content_type_id;
+
+  if (typeof requestedPlaceId !== "string") {
+    return;
+  }
+
+  selectedPlace.value =
+    places.value.find(
+      (place) =>
+        String(place.id) === requestedPlaceId &&
+        (typeof requestedContentTypeId !== "string" ||
+          String(place.content_type_id) === requestedContentTypeId),
+    ) ?? null;
+}
+
 async function fetchPlaces() {
   const currentRequest = ++requestSequence;
 
@@ -65,6 +89,11 @@ async function fetchPlaces() {
     }
 
     places.value = response.data;
+
+    if (route.query.place_id) {
+      selectRequestedPlace();
+      return;
+    }
 
     if (
       selectedPlace.value &&
@@ -87,6 +116,25 @@ async function fetchPlaces() {
 }
 
 watch([selectedContentTypeId, selectedRegion], fetchPlaces);
+
+watch(
+  () => [route.query.place_id, route.query.content_type_id],
+  ([, contentTypeId], previousQuery) => {
+    const nextContentTypeId =
+      typeof contentTypeId === "string" ? contentTypeId : "";
+
+    selectedRegion.value = "";
+
+    if (selectedContentTypeId.value !== nextContentTypeId) {
+      selectedContentTypeId.value = nextContentTypeId;
+      return;
+    }
+
+    if (previousQuery) {
+      fetchPlaces();
+    }
+  },
+);
 
 onMounted(fetchPlaces);
 </script>
@@ -140,7 +188,11 @@ onMounted(fetchPlaces);
 
     <div v-else class="map-view__content">
       <div class="map-view__map">
-        <LeafletMap :places="places" @select-place="selectPlace" />
+        <LeafletMap
+          :places="places"
+          :selected-place="selectedPlace"
+          @select-place="selectPlace"
+        />
       </div>
 
       <PlaceDetailPanel
