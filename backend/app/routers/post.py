@@ -1,17 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.crud import post as crud
 from app.db.database import get_db
+from app.models.post import PostCategory
 from app.schemas.post import PostCreate, PostDelete, PostResponse, PostUpdate
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
 
 
 @router.get("", response_model=list[PostResponse])
-def list_posts(db: Session = Depends(get_db)):
-    """게시글 목록 조회."""
-    return crud.get_posts(db)
+def list_posts(
+    category: PostCategory | None = Query(
+        default=None,
+        description="카테고리 단일 필터. 지정하지 않으면 전체 목록을 반환한다.",
+    ),
+    limit: int | None = Query(
+        default=None,
+        gt=0,
+        description="반환할 최대 게시글 수. 지정하지 않으면 전체 반환. 예: 최근 5개 -> limit=5",
+    ),
+    db: Session = Depends(get_db),
+):
+    """게시글 목록 조회. category/limit 쿼리 파라미터로 필터링·개수 제한 가능."""
+    return crud.get_posts(db, category, limit)
 
 
 @router.get("/{post_id}", response_model=PostResponse)
