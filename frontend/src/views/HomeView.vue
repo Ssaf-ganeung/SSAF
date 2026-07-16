@@ -3,11 +3,11 @@ import { ref, onMounted } from 'vue'
 import { fetchPosts } from '../api/posts'
 import HeroMascots from '../components/common/HeroMascots.vue'
 
-// 카테고리 바로가기 (지도 필터는 선택기능이므로 지금은 게시판으로 연결)
+// 카테고리 바로가기 (typeId는 지역정보 페이지의 content_type_id, placeTypes.js 참고)
 const categories = [
-  { key: 'tour', label: '관광지', icon: '🏞️' },
-  { key: 'food', label: '맛집', icon: '🍜' },
-  { key: 'festival', label: '축제·행사', icon: '🎉' },
+  { key: 'tour', label: '관광지', icon: '🏞️', typeId: '12' },
+  { key: 'food', label: '맛집', icon: '🍜', typeId: '39' },
+  { key: 'festival', label: '축제·행사', icon: '🎉', typeId: '15' },
 ]
 
 const recentPosts = ref([])
@@ -56,7 +56,7 @@ function formatDate(value) {
           <RouterLink
             v-for="cat in categories"
             :key="cat.key"
-            to="/community"
+            :to="{ name: 'local-info', query: { category: cat.typeId } }"
             class="category-card"
           >
             <span class="category-card__icon">{{ cat.icon }}</span>

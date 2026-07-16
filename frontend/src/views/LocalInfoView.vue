@@ -1,12 +1,23 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
 import { getPlaces } from "../api/places";
 import CategoryTabs from "../components/localInfo/CategoryTabs.vue";
 import PlaceCard from "../components/localInfo/PlaceCard.vue";
+import { PLACE_TYPE_MAP } from "../constants/placeTypes";
+
+const DEFAULT_TYPE_ID = "12";
+
+const route = useRoute();
+
+// 쿼리로 들어온 카테고리 값이 유효하지 않으면 기본 카테고리로 대체한다
+function resolveTypeId(value) {
+  return PLACE_TYPE_MAP[value] ? String(value) : DEFAULT_TYPE_ID;
+}
 
 const places = ref([]);
-const selectedTypeId = ref("12");
+const selectedTypeId = ref(resolveTypeId(route.query.category));
 const loading = ref(false);
 const error = ref("");
 
@@ -48,6 +59,16 @@ async function fetchPlaces() {
 }
 
 watch(selectedTypeId, fetchPlaces);
+
+// 홈 카테고리 바로가기 등으로 쿼리만 바뀐 경우에도 탭이 따라가도록 한다
+watch(
+  () => route.query.category,
+  (value) => {
+    if (value !== undefined) {
+      selectedTypeId.value = resolveTypeId(value);
+    }
+  },
+);
 
 onMounted(fetchPlaces);
 </script>
