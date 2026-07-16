@@ -8,19 +8,23 @@ import maknaeng from '../../assets/Daejeon_mascots/maknaeng.png'
 import ganadi from '../../assets/Daejeon_mascots/ganadi.png'
 import nev from '../../assets/Daejeon_mascots/nev.png'
 
+// ease: 목표 지점까지 매 프레임 좁히는 비율 = 따라오는 속도.
+// 꿈돌이가 가장 커서 제일 먼저 출발하고, 뒤로 갈수록 느려져 뒤따라 모여든다.
 const mascots = [
-  { src: ggumdori, name: '꿈돌이' },
-  { src: first, name: '첫째' },
-  { src: second, name: '둘째' },
-  { src: third, name: '셋째' },
-  { src: maknaeng, name: '막냉이' },
-  { src: ganadi, name: '가나디' },
-  { src: nev, name: '네브' },
+  { src: ggumdori, name: '꿈돌이', ease: 0.14 },
+  { src: first, name: '첫째', ease: 0.07 },
+  { src: second, name: '둘째', ease: 0.055 },
+  { src: third, name: '셋째', ease: 0.042 },
+  { src: maknaeng, name: '막냉이', ease: 0.032 },
+  { src: ganadi, name: '가나디', ease: 0.024 },
+  { src: nev, name: '네브', ease: 0.018 },
 ]
 
-// 커서를 따라가는 정도. 7명 모두 같은 값이라 대형을 유지한 채 함께 움직인다.
-const FOLLOW = 0.2
-const EASING = 0.08 // 목표 지점까지 매 프레임 좁히는 비율. 낮을수록 느긋하게 따라온다.
+// 커서 쪽으로 얼마나 모여드는지. 1이면 커서 자리까지 그대로 간다.
+const FOLLOW = 1
+
+// 서로 겹쳐도 되는 한도. 중심 사이 거리를 (두 폭의 평균 × 0.8) 이상으로 유지 → 최대 20% 겹침.
+const OVERLAP = 0.8
 
 const rootRef = ref(null)
 const itemEls = []
@@ -28,8 +32,8 @@ const itemEls = []
 let fenceEl = null
 // 각 마스코트의 기준 위치(울타리 기준 상대 좌표). transform이 0일 때의 자리.
 let bases = []
-// 지금 적용 중인 이동량. 목표값으로 매 프레임 조금씩 다가간다.
-let current = mascots.map(() => ({ x: 0, y: 0 }))
+// 지금 있는 자리(울타리 기준 중심 좌표). 각자 따로 움직이므로 대형은 유지되지 않는다.
+let pos = mascots.map(() => ({ cx: 0, cy: 0 }))
 let cursor = { x: 0, y: 0 }
 let following = false
 let rafId = null
@@ -58,7 +62,38 @@ function measure() {
       height: r.height,
     }
   })
-  current = mascots.map(() => ({ x: 0, y: 0 }))
+  pos = bases.map((b) => ({ cx: b.left + b.width / 2, cy: b.top + b.height / 2 }))
+}
+
+/** 너무 가까운 둘을 서로 반대로 밀어 겹침이 20%를 넘지 않게 한다. */
+function separate() {
+  for (let i = 0; i < pos.length; i++) {
+    for (let j = i + 1; j < pos.length; j++) {
+      const a = bases[i]
+      const b = bases[j]
+      if (!a || !b) continue
+
+      let dx = pos[j].cx - pos[i].cx
+      let dy = pos[j].cy - pos[i].cy
+      let dist = Math.hypot(dx, dy)
+      const minDist = ((a.width + b.width) / 2) * OVERLAP
+      if (dist >= minDist) continue
+
+      // 완전히 포개지면 방향을 못 정하므로 아무 쪽으로나 떼어놓는다
+      if (dist < 0.01) {
+        dx = 1
+        dy = 0
+        dist = 1
+      }
+      const push = (minDist - dist) / 2
+      const nx = (dx / dist) * push
+      const ny = (dy / dist) * push
+      pos[i].cx -= nx
+      pos[i].cy -= ny
+      pos[j].cx += nx
+      pos[j].cy += ny
+    }
+  }
 }
 
 function onMouseMove(event) {
@@ -73,25 +108,33 @@ function tick() {
     const cursorX = cursor.x - fence.left
     const cursorY = cursor.y - fence.top
 
+    // 1) 각자 자기 속도로 커서를 향해 간다. 커서가 없으면 제자리로 돌아간다.
+    mascots.forEach((mascot, i) => {
+      const base = bases[i]
+      if (!base) return
+      const homeCx = base.left + base.width / 2
+      const homeCy = base.top + base.height / 2
+      const targetCx = following ? homeCx + (cursorX - homeCx) * FOLLOW : homeCx
+      const targetCy = following ? homeCy + (cursorY - homeCy) * FOLLOW : homeCy
+      pos[i].cx += (targetCx - pos[i].cx) * mascot.ease
+      pos[i].cy += (targetCy - pos[i].cy) * mascot.ease
+    })
+
+    // 2) 한 점으로 모이면 다 포개지므로, 20%까지만 겹치게 서로 밀어낸다
+    separate()
+
+    // 3) 울타리 안으로 가둔 뒤 그린다
     mascots.forEach((mascot, i) => {
       const base = bases[i]
       const el = itemEls[i]
       if (!base || !el) return
-
-      let targetX = 0
-      let targetY = 0
-      if (following) {
-        targetX = (cursorX - (base.left + base.width / 2)) * FOLLOW
-        targetY = (cursorY - (base.top + base.height / 2)) * FOLLOW
-      }
-
-      // 울타리 밖으로는 못 나간다
-      targetX = clamp(targetX, -base.left, fence.width - (base.left + base.width))
-      targetY = clamp(targetY, -base.top, fence.height - (base.top + base.height))
-
-      current[i].x += (targetX - current[i].x) * EASING
-      current[i].y += (targetY - current[i].y) * EASING
-      el.style.transform = `translate(${current[i].x.toFixed(2)}px, ${current[i].y.toFixed(2)}px)`
+      const halfW = base.width / 2
+      const halfH = base.height / 2
+      pos[i].cx = clamp(pos[i].cx, halfW, fence.width - halfW)
+      pos[i].cy = clamp(pos[i].cy, halfH, fence.height - halfH)
+      const dx = pos[i].cx - (base.left + halfW)
+      const dy = pos[i].cy - (base.top + halfH)
+      el.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px)`
     })
   }
   rafId = requestAnimationFrame(tick)
@@ -125,6 +168,7 @@ onUnmounted(() => {
       :src="mascot.src"
       :alt="mascot.name"
       class="hero-mascots__item"
+      :style="{ zIndex: mascots.length - index }"
       @load="measure"
     />
   </div>
