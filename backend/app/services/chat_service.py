@@ -63,3 +63,50 @@ def generate_reply(messages: list[ChatMessage]) -> str:
     except Exception as exc:  # 네트워크/키/쿼터 오류 등
         print(f"[chat_service] OpenAI 호출 실패: {exc}")
         return "죄송해요, 지금 답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요."
+
+def stream_reply(messages: list[ChatMessage]):
+    if not settings.OPENAI_API_KEY:
+        yield "(OpenAI API 키가 없습니다.)"
+        return
+
+    if not messages:
+        yield "무엇이 궁금하신가요?"
+        return
+
+    last_user = next(
+        (message.content for message in reversed(messages) if message.role == "user"),
+        "",
+    )
+
+    system_prompt = _build_system_prompt(last_user)
+
+    history = [
+        {
+            "role": message.role,
+            "content": message.content,
+        }
+        for message in messages[-MAX_HISTORY:]
+    ]
+
+    try:
+        stream = _get_client().chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                *history,
+            ],
+            stream=True,
+        )
+
+        for chunk in stream:
+            content = chunk.choices[0].delta.content
+
+            if content:
+                yield content
+
+    except Exception as exc:
+        print(f"[chat_service] OpenAI 스트리밍 실패: {exc}")
+        yield "죄송해요, 지금 답변을 생성하지 못했어요."

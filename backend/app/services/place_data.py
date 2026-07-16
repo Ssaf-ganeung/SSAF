@@ -39,6 +39,8 @@ def load_places() -> list[dict]:
         content_type = raw.get("contentType", "")
         for item in raw.get("items", []):
             places.append({
+                "id": str(item.get("contentid", "")),
+    "content_type_id": str(item.get("contenttypeid", "")),
                 "title": item.get("title", ""),
                 "type": content_type,
                 "addr": item.get("addr1", ""),
