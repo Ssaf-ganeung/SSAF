@@ -12,6 +12,8 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["select-place"]);
+
 const PLACE_ICONS = Object.fromEntries(
   PLACE_TYPES.map((placeType) => [placeType.id, L.icon(placeType.icon)]),
 );
@@ -126,6 +128,10 @@ function renderMarkers() {
       minWidth: 220,
       maxWidth: 280,
       autoPanPadding: [20, 20],
+    });
+
+    marker.on("click", () => {
+      emit("select-place", place);
     });
 
     marker.addTo(markerLayer);
