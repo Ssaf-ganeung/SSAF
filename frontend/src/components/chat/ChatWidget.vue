@@ -226,9 +226,19 @@ async function handleSend(text) {
 
   .chat-widget__panel {
     width: 100vw;
+    /* dvh는 주소창을 뺀 실제 보이는 높이. vh만 쓰면 입력창이 화면 밖으로 밀린다. */
     height: 100vh;
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
+  }
+
+  /* 화면을 덮는 챗봇 버튼은 부담스러우므로 줄인다 */
+  .chat-widget__toggle {
+    right: 16px;
+    bottom: 16px;
+    width: 88px;
+    height: 88px;
   }
 
   .chat-widget__robot,
