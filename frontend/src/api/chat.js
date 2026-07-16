@@ -59,6 +59,10 @@ export async function streamChatMessage(messages, handlers) {
         handlers.onPlaces?.(data);
       }
 
+      if (eventName === "posts") {
+        handlers.onPosts?.(data);
+      }
+
       if (eventName === "delta") {
         handlers.onDelta?.(data.content);
       }

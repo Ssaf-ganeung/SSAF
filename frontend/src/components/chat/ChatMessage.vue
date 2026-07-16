@@ -12,6 +12,10 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  relatedPosts: {
+    type: Array,
+    default: () => [],
+  },
 });
 </script>
 
@@ -38,6 +42,21 @@ defineProps({
         class="chat-message__map-link"
       >
         {{ place.title }} 지도에서 보기
+      </RouterLink>
+    </div>
+
+    <!-- 게시글을 물었을 때는 지도가 아니라 게시글 상세로 보낸다 -->
+    <div
+      v-if="role === 'assistant' && relatedPosts.length"
+      class="chat-message__places"
+    >
+      <RouterLink
+        v-for="post in relatedPosts"
+        :key="post.id"
+        :to="{ name: 'community-detail', params: { id: post.id } }"
+        class="chat-message__post-link"
+      >
+        {{ post.title }} 게시글 보기
       </RouterLink>
     </div>
   </div>
@@ -98,5 +117,22 @@ defineProps({
 .chat-message__map-link:hover {
   color: #fff;
   background: #004346;
+}
+
+/* 게시글 링크: 지도 링크와 구분되게 위젯 초록 계열로 */
+.chat-message__post-link {
+  padding: 7px 9px;
+  color: #2c5c40;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  background: rgba(64, 138, 92, 0.14);
+  border: 1px solid #408a5c;
+  border-radius: 7px;
+}
+
+.chat-message__post-link:hover {
+  color: #fff;
+  background: #408a5c;
 }
 </style>

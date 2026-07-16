@@ -33,6 +33,7 @@ watch(() => [chatStore.messages.length, chatStore.isLoading], scrollToBottom);
       :role="message.role"
       :content="message.content"
       :related-places="message.relatedPlaces ?? []"
+      :related-posts="message.relatedPosts ?? []"
     />
 
     <!-- 답변 대기 중 표시 -->

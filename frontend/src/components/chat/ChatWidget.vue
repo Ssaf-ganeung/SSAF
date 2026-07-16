@@ -68,6 +68,10 @@ async function handleSend(text) {
         chatStore.setLastAssistantRelatedPlaces(relatedPlaces);
       },
 
+      onPosts(relatedPosts) {
+        chatStore.setLastAssistantRelatedPosts(relatedPosts);
+      },
+
       onDelta(content) {
         chatStore.appendToLastAssistantMessage(content);
       },

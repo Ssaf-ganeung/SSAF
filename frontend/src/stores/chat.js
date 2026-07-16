@@ -10,11 +10,12 @@ export const useChatStore = defineStore("chat", {
     toggle() {
       this.isOpen = !this.isOpen;
     },
-    addMessage(role, content, relatedPlaces = []) {
+    addMessage(role, content, relatedPlaces = [], relatedPosts = []) {
       this.messages.push({
         role,
         content,
         relatedPlaces,
+        relatedPosts,
       });
     },
     setLoading(value) {
@@ -33,6 +34,14 @@ export const useChatStore = defineStore("chat", {
 
       if (lastMessage?.role === "assistant") {
         lastMessage.relatedPlaces = relatedPlaces;
+      }
+    },
+
+    setLastAssistantRelatedPosts(relatedPosts) {
+      const lastMessage = this.messages[this.messages.length - 1];
+
+      if (lastMessage?.role === "assistant") {
+        lastMessage.relatedPosts = relatedPosts;
       }
     },
   },

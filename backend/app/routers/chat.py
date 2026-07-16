@@ -7,6 +7,7 @@ from app.schemas.chat import ChatMessage, ChatRequest, ChatResponse
 from app.services.chat_service import generate_reply, stream_reply
 from app.services.place_data import search_chat_places, search_places
 from app.services.place_service import detect_region, is_in_service_area
+from app.services.post_search import has_post_intent, search_posts
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -73,6 +74,18 @@ def retrieve_places(payload: ChatRequest) -> list[dict]:
     )
 
 
+def retrieve_posts(payload: ChatRequest) -> list[dict]:
+    """게시글 상세로 링크할 수 있게 id/제목/카테고리만 추린다."""
+    return [
+        {
+            "id": post["id"],
+            "title": post["title"],
+            "category": post["category"],
+        }
+        for post in search_posts(get_last_user_message(payload.messages), limit=3)
+    ]
+
+
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest) -> ChatResponse:
     searched_places = retrieve_places(payload)
@@ -91,12 +104,18 @@ def search(q: str, limit: int = 8) -> list[dict]:
 
 @router.post("/chat/stream")
 def stream_chat(payload: ChatRequest) -> StreamingResponse:
-    searched_places = retrieve_places(payload)
+    # "맛집 게시글 보여줘"처럼 게시글을 물으면 지도 링크가 아니라 게시글 링크를 줘야 한다.
+    post_intent = has_post_intent(get_last_user_message(payload.messages))
+    related_posts = retrieve_posts(payload) if post_intent else []
+    searched_places = [] if post_intent else retrieve_places(payload)
     related_places = normalize_related_places(searched_places)
 
     def generate_events():
         places_data = json.dumps(related_places, ensure_ascii=False)
         yield f"event: places\ndata: {places_data}\n\n"
+
+        posts_data = json.dumps(related_posts, ensure_ascii=False)
+        yield f"event: posts\ndata: {posts_data}\n\n"
 
         for content in stream_reply(payload.messages, searched_places):
             delta_data = json.dumps({"content": content}, ensure_ascii=False)
