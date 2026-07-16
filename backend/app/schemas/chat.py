@@ -12,6 +12,13 @@ class ChatRelatedPlace(BaseModel):
     longitude: float
 
 
+class ChatRelatedPost(BaseModel):
+    """챗봇이 근거로 쓴 커뮤니티 게시글. 프론트는 이걸로 게시글 상세 링크를 만든다."""
+    id: int
+    title: str
+    category: str
+
+
 class ChatMessage(BaseModel):
     """대화 한 줄. 프론트 Pinia store의 메시지와 동일한 모양."""
     role: Literal["user", "assistant"]
@@ -26,3 +33,4 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     related_places: list[ChatRelatedPlace] = Field(default_factory=list)
+    related_posts: list[ChatRelatedPost] = Field(default_factory=list)

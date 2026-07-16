@@ -46,18 +46,27 @@ def _get_client() -> OpenAI:
     return _client
 
 
-def _build_system_prompt(message: str) -> str:
-    """질문과 관련된 실제 장소·커뮤니티 게시글을 검색해 근거로 덧붙인다(RAG)."""
-    place_context = format_context(search_places(message))
+def _build_system_prompt(
+    message: str,
+    places: list[dict] | None = None,
+    posts: list[dict] | None = None,
+) -> str:
+    """라우터가 이미 검색해 둔 결과만 근거로 쓴다(RAG).
 
-    # 게시글은 물어봤을 때만 붙인다. 장소 질문에 게시글이 섞이면 답이 흐려진다.
-    # limit은 라우터가 링크로 내려보내는 개수(3)와 같아야 한다. 다르면 답변에서 언급한
-    # 글의 링크가 없거나, 링크에만 있고 답변에 없는 글이 생긴다.
-    post_context = ""
-    if has_post_intent(message):
-        post_context = format_post_context(search_posts(message, limit=POST_LINK_LIMIT))
+    여기서 다시 검색하면 안 된다. 라우터는 검색 결과를 링크로도 내려보내는데,
+    여기서 따로 검색하면 두 목록이 어긋나 "A를 추천"해놓고 링크는 B로 가게 된다.
+    """
+    place_context = format_context(places or [])
+    post_context = format_post_context(posts or [])
 
     if not place_context and not post_context:
+        if has_post_intent(message):
+            # 게시글을 물었는데 결과가 0건. 이 말이 없으면 모델이 글을 지어낸다.
+            return (
+                f"{SYSTEM_PROMPT}\n\n"
+                "사용자가 커뮤니티 게시글을 물었지만 검색 결과가 없습니다. "
+                "관련 게시글이 아직 없다고 솔직히 답하세요. 게시글을 지어내지 마세요."
+            )
         return SYSTEM_PROMPT
 
     sections = [SYSTEM_PROMPT, ""]
@@ -98,16 +107,16 @@ def _build_system_prompt(message: str) -> str:
 def generate_reply(
     messages: list[ChatMessage],
     places: list[dict] | None = None,
+    posts: list[dict] | None = None,
 ) -> str:
-    """대화 히스토리 전체를 받아 OpenAI 응답 텍스트를 돌려준다."""
+    """대화 히스토리와 라우터가 검색해 둔 근거를 받아 OpenAI 응답 텍스트를 돌려준다."""
     if not settings.OPENAI_API_KEY:
         return "(OpenAI API 키가 없습니다. backend/.env 의 OPENAI_API_KEY 를 채워주세요.)"
     if not messages:
         return "무엇이 궁금하신가요?"
 
-    # 검색(RAG)은 가장 최근 사용자 메시지 기준으로 수행
     last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
-    system_prompt = _build_system_prompt(last_user)
+    system_prompt = _build_system_prompt(last_user, places, posts)
 
     # 최근 MAX_HISTORY개만 잘라서 맥락 유지 (오래된 대화는 버림)
     history = [{"role": m.role, "content": m.content} for m in messages[-MAX_HISTORY:]]
@@ -125,6 +134,7 @@ def generate_reply(
 def stream_reply(
     messages: list[ChatMessage],
     places: list[dict] | None = None,
+    posts: list[dict] | None = None,
 ):
     if not settings.OPENAI_API_KEY:
         yield "(OpenAI API 키가 없습니다.)"
@@ -134,13 +144,12 @@ def stream_reply(
         yield "무엇이 궁금하신가요?"
         return
 
-    # 검색(RAG)은 최근 사용자 메시지 기준. 유형·지역 힌트는 직전 질문들에서 물려받는다.
-    recent_user_texts = [
-        message.content for message in reversed(messages) if message.role == "user"
-    ][:3]
-    last_user = recent_user_texts[0] if recent_user_texts else ""
+    last_user = next(
+        (message.content for message in reversed(messages) if message.role == "user"),
+        "",
+    )
 
-    system_prompt = _build_system_prompt(last_user)
+    system_prompt = _build_system_prompt(last_user, places, posts)
 
     history = [
         {
