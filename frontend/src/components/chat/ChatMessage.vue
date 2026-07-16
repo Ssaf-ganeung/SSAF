@@ -11,6 +11,8 @@ defineProps({
 
 <style scoped>
 .chat-message {
+  position: relative;
+  z-index: 1; /* 배경에 떠다니는 사진 위에 오도록 */
   max-width: 80%;
   padding: 8px 12px;
   border-radius: 12px;
