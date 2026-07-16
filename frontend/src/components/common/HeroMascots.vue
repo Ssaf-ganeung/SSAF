@@ -8,23 +8,27 @@ import maknaeng from '../../assets/Daejeon_mascots/maknaeng.png'
 import ganadi from '../../assets/Daejeon_mascots/ganadi.png'
 import nev from '../../assets/Daejeon_mascots/nev.png'
 
-// ease: 목표 지점까지 매 프레임 좁히는 비율 = 따라오는 속도.
+// ease: 목표 지점까지 매 프레임 좁히는 비율 = 커서를 따라오는 속도(데스크톱 전용).
 // 꿈돌이가 가장 커서 제일 먼저 출발하고, 뒤로 갈수록 느려져 뒤따라 모여든다.
+// bob: 모바일에서 제자리 위아래로 흔들리는 주기/시작점. 서로 어긋나야 따로 논다.
 const mascots = [
-  { src: ggumdori, name: '꿈돌이', ease: 0.101 },
-  { src: first, name: '첫째', ease: 0.05 },
-  { src: second, name: '둘째', ease: 0.04 },
-  { src: third, name: '셋째', ease: 0.031 },
-  { src: maknaeng, name: '막냉이', ease: 0.023 },
-  { src: ganadi, name: '가나디', ease: 0.017 },
-  { src: nev, name: '네브', ease: 0.013 },
+  { src: ggumdori, name: '꿈돌이', ease: 0.101, bobDuration: '2.4s', bobDelay: '0s' },
+  { src: first, name: '첫째', ease: 0.05, bobDuration: '2.8s', bobDelay: '-0.3s' },
+  { src: second, name: '둘째', ease: 0.04, bobDuration: '3.2s', bobDelay: '-0.6s' },
+  { src: third, name: '셋째', ease: 0.031, bobDuration: '2.6s', bobDelay: '-0.9s' },
+  { src: maknaeng, name: '막냉이', ease: 0.023, bobDuration: '3s', bobDelay: '-1.2s' },
+  { src: ganadi, name: '가나디', ease: 0.017, bobDuration: '2.7s', bobDelay: '-1.5s' },
+  { src: nev, name: '네브', ease: 0.013, bobDuration: '3.4s', bobDelay: '-1.8s' },
 ]
 
 // 커서 쪽으로 얼마나 모여드는지. 1이면 커서 자리까지 그대로 간다.
 const FOLLOW = 1
 
-// 서로 겹쳐도 되는 한도. 중심 사이 거리를 (두 폭의 평균 × 0.8) 이상으로 유지 → 최대 20% 겹침.
+// 서로 겹쳐도 되는 한도. 중심 사이 거리를 (두 폭의 평균 × 0.9) 이상으로 유지.
 const OVERLAP = 0.9
+
+// 이 폭 아래로는 커서가 없다고 보고 CSS 애니메이션에 맡긴다. CSS의 미디어쿼리와 같은 값.
+const MOBILE_QUERY = '(max-width: 768px)'
 
 const rootRef = ref(null)
 const itemEls = []
@@ -37,6 +41,7 @@ let pos = mascots.map(() => ({ cx: 0, cy: 0 }))
 let cursor = { x: 0, y: 0 }
 let following = false
 let rafId = null
+let mobileMq = null
 
 function setItemRef(el, index) {
   if (el) itemEls[index] = el
@@ -46,9 +51,16 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
 }
 
+/** 커서를 따라다닐 상황인가. 모바일이거나 움직임을 원치 않으면 아니다. */
+function shouldFollow() {
+  if (mobileMq?.matches) return false
+  return !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 /** 기준 위치를 다시 잰다. transform을 잠시 걷어내야 원래 자리를 알 수 있다. */
 function measure() {
-  if (!fenceEl) return
+  // 모바일에선 인라인 transform을 건드리면 CSS 흔들림 애니메이션이 죽는다
+  if (!fenceEl || !shouldFollow()) return
   itemEls.forEach((el) => {
     if (el) el.style.transform = 'translate(0, 0)'
   })
@@ -65,7 +77,7 @@ function measure() {
   pos = bases.map((b) => ({ cx: b.left + b.width / 2, cy: b.top + b.height / 2 }))
 }
 
-/** 너무 가까운 둘을 서로 반대로 밀어 겹침이 20%를 넘지 않게 한다. */
+/** 너무 가까운 둘을 서로 반대로 밀어 지나치게 포개지지 않게 한다. */
 function separate() {
   for (let i = 0; i < pos.length; i++) {
     for (let j = i + 1; j < pos.length; j++) {
@@ -120,7 +132,7 @@ function tick() {
       pos[i].cy += (targetCy - pos[i].cy) * mascot.ease
     })
 
-    // 2) 한 점으로 모이면 다 포개지므로, 20%까지만 겹치게 서로 밀어낸다
+    // 2) 한 점으로 모이면 다 포개지므로 서로 밀어낸다
     separate()
 
     // 3) 울타리 안으로 가둔 뒤 그린다
@@ -140,22 +152,46 @@ function tick() {
   rafId = requestAnimationFrame(tick)
 }
 
+function startFollowing() {
+  if (rafId) return
+  measure()
+  // 커서가 페이지 어디에 있든 반응하도록 window에 건다(움직임은 울타리 안으로 제한)
+  window.addEventListener('mousemove', onMouseMove)
+  rafId = requestAnimationFrame(tick)
+}
+
+function stopFollowing() {
+  window.removeEventListener('mousemove', onMouseMove)
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+  following = false
+  // 인라인 transform을 걷어내야 CSS 흔들림 애니메이션이 살아난다
+  itemEls.forEach((el) => {
+    if (el) el.style.transform = ''
+  })
+}
+
+/** 화면 크기가 바뀌면 커서 추적과 CSS 흔들림 사이를 오간다. */
+function applyMode() {
+  if (shouldFollow()) startFollowing()
+  else stopFollowing()
+}
+
 onMounted(() => {
   // 울타리는 부모(.hero). 없으면 자기 자신으로 물러선다.
   fenceEl = rootRef.value?.parentElement ?? rootRef.value
-  measure()
-  // 움직임을 원치 않는 사용자에게는 따라다니지 않는다
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-  // 커서가 페이지 어디에 있든 반응하도록 window에 건다(움직임은 울타리 안으로 제한)
-  window.addEventListener('mousemove', onMouseMove)
+  mobileMq = window.matchMedia(MOBILE_QUERY)
+  mobileMq.addEventListener('change', applyMode)
   window.addEventListener('resize', measure)
-  rafId = requestAnimationFrame(tick)
+  applyMode()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('mousemove', onMouseMove)
+  mobileMq?.removeEventListener('change', applyMode)
   window.removeEventListener('resize', measure)
-  if (rafId) cancelAnimationFrame(rafId)
+  stopFollowing()
 })
 </script>
 
@@ -168,7 +204,11 @@ onUnmounted(() => {
       :src="mascot.src"
       :alt="mascot.name"
       class="hero-mascots__item"
-      :style="{ zIndex: mascots.length - index }"
+      :style="{
+        zIndex: mascots.length - index,
+        animationDuration: mascot.bobDuration,
+        animationDelay: mascot.bobDelay,
+      }"
       @load="measure"
     />
   </div>
@@ -195,12 +235,32 @@ onUnmounted(() => {
   -webkit-user-drag: none;
 }
 
+/* 모바일: 커서가 없으니 제자리에서 위아래로만. 폭에 맞춰 7명이 한 줄에 들어가게 줄인다. */
 @media (max-width: 768px) {
   .hero-mascots {
-    gap: 8px;
+    gap: 4px;
   }
   .hero-mascots__item {
-    width: 57px;
+    width: min(11vw, 48px);
+    animation-name: mascot-bob;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+}
+
+@keyframes mascot-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-mascots__item {
+    animation: none;
   }
 }
 </style>
