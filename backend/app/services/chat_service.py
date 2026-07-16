@@ -3,15 +3,30 @@ from openai import OpenAI
 
 from app.core.config import settings
 from app.schemas.chat import ChatMessage
-from app.services.place_data import search_places, format_context
+from app.services.place_data import search_places, format_context, resolve_intent
 
 # OpenAI에 보낼 대화 히스토리 최대 길이 (토큰/비용 폭주 방지)
 MAX_HISTORY = 12
 
 # 챗봇의 정체성/말투를 정하는 지시문.
 SYSTEM_PROMPT = (
-    "당신은 대전·충청권 지역 정보를 안내하는 친절한 도우미 '대·충 봇'입니다. "
-    "한국어로 간결하고 정확하게 답하세요. 모르면 모른다고 말하세요."
+    "당신은 대전·충청권 지역 정보를 안내하는 '대·충 봇'입니다. "
+    "동네 사정에 밝은 친구처럼, 밝고 친근한 존댓말로 이야기하세요.\n"
+    "\n"
+    "말투와 형식 규칙:\n"
+    "- 채팅창이라 길면 읽지 않습니다. 짧게 답하세요.\n"
+    "- **굵게**, # 제목, - 불릿은 쓰지 마세요. 화면에 기호가 그대로 보입니다.\n"
+    "- 한두 곳만 말할 때는 목록 없이 '유성구 쪽이 무난한데, 리베라 호텔이 온천이랑 가까워요' "
+    "처럼 말로 풀어서 이어 말하세요.\n"
+    "- 세 개 이상을 나열하거나 사용자가 목록을 원하면, 한 줄에 하나씩 줄바꿈해서 "
+    "'1. ', '2. ', '3. ' 처럼 숫자를 붙이세요. 한 항목은 한 줄로 짧게 쓰세요.\n"
+    "- 이모지는 답변당 최대 1개까지만, 어울릴 때만 쓰세요.\n"
+    "- '무엇을 도와드릴까요', '도움이 되었길 바랍니다', '~에 대해 안내해 드리겠습니다' 같은 "
+    "형식적인 서론과 맺음말은 쓰지 마세요. 바로 본론부터 답하세요.\n"
+    "- 사용자가 묻지 않은 정보를 덧붙이지 마세요.\n"
+    "- 되물을 게 있으면 마지막에 짧은 질문 하나로 끝내세요.\n"
+    "\n"
+    "모르는 것은 지어내지 말고 솔직히 모른다고 말하세요."
 )
 
 # OpenAI 클라이언트는 한 번만 만들어 재사용 (요청마다 새로 만들 필요 없음)
@@ -25,9 +40,14 @@ def _get_client() -> OpenAI:
     return _client
 
 
-def _build_system_prompt(message: str) -> str:
-    """질문과 관련된 실제 장소를 검색해 시스템 프롬프트에 근거로 덧붙인다(RAG)."""
-    places = search_places(message)
+def _build_system_prompt(message: str, recent_user_texts: list[str]) -> str:
+    """질문과 관련된 실제 장소를 검색해 시스템 프롬프트에 근거로 덧붙인다(RAG).
+
+    유형·지역은 최근 사용자 메시지들에서 물려받는다. "맛집 추천해줘" 다음의
+    "서구에 있는 거" 처럼 후속 질문만으로는 무엇을 찾는지 알 수 없기 때문.
+    """
+    wanted_type, regions = resolve_intent(recent_user_texts)
+    places = search_places(message, wanted_type=wanted_type, regions=regions)
     context = format_context(places)
     if not context:
         return SYSTEM_PROMPT
@@ -47,9 +67,10 @@ def generate_reply(messages: list[ChatMessage]) -> str:
     if not messages:
         return "무엇이 궁금하신가요?"
 
-    # 검색(RAG)은 가장 최근 사용자 메시지 기준으로 수행
-    last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
-    system_prompt = _build_system_prompt(last_user)
+    # 검색(RAG)은 최근 사용자 메시지 기준. 유형·지역 힌트는 직전 질문들에서 물려받는다.
+    recent_user_texts = [m.content for m in reversed(messages) if m.role == "user"][:3]
+    last_user = recent_user_texts[0] if recent_user_texts else ""
+    system_prompt = _build_system_prompt(last_user, recent_user_texts)
 
     # 최근 MAX_HISTORY개만 잘라서 맥락 유지 (오래된 대화는 버림)
     history = [{"role": m.role, "content": m.content} for m in messages[-MAX_HISTORY:]]
