@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { fetchPosts } from '../api/posts'
+import HeroMascots from '../components/common/HeroMascots.vue'
 
 // 카테고리 바로가기 (지도 필터는 선택기능이므로 지금은 게시판으로 연결)
 const categories = [
@@ -44,6 +45,7 @@ function formatDate(value) {
     <section class="hero">
       <h1 class="hero__title">지역 정보 공유 커뮤니티 LocalHub</h1>
       <p class="hero__subtitle">대전·충청 지역 정보를 한눈에 만나보세요</p>
+      <HeroMascots />
     </section>
 
     <div class="home__inner">
@@ -95,8 +97,10 @@ function formatDate(value) {
   color: var(--color-text);
 }
 
-/* 히어로 배너 */
+/* 히어로 배너. 마스코트가 돌아다니는 울타리 역할도 한다(HeroMascots 참고) */
 .hero {
+  position: relative;
+  overflow: hidden; /* 마스코트가 배너 밖으로 나가지 않도록 */
   background: var(--color-primary-light);
   min-height: 180px;
   display: flex;
@@ -106,6 +110,12 @@ function formatDate(value) {
   gap: 8px;
   padding: 32px 16px;
   text-align: center;
+}
+/* 마스코트가 위로 올라와도 글자를 가리지 않게 */
+.hero__title,
+.hero__subtitle {
+  position: relative;
+  z-index: 1;
 }
 .hero__title {
   font-size: var(--font-size-h1);
