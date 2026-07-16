@@ -4,6 +4,7 @@
 서버 시작 후 최초 1회만 파일을 읽어 메모리에 캐시한다.
 """
 import json
+import math
 from pathlib import Path
 
 # 이 파일: backend/app/services/place_data.py → .parent 3번 = backend/ → /data
@@ -40,6 +41,7 @@ REGION_WORDS = [
 BROAD_REGIONS = {"대전", "세종", "충청", "충남", "충북"}
 
 _places: list[dict] = []
+PROXIMITY_WORDS = ("가까운", "근처", "주변")
 
 
 def load_places() -> list[dict]:
@@ -150,6 +152,109 @@ def search_places(
     return [place for _, place in scored[:limit]]
 
 
+def _distance_km(first: dict, second: dict) -> float:
+    """두 장소 좌표 사이의 직선거리를 Haversine 공식으로 계산한다."""
+    first_latitude = math.radians(float(first["lat"]))
+    first_longitude = math.radians(float(first["lng"]))
+    second_latitude = math.radians(float(second["lat"]))
+    second_longitude = math.radians(float(second["lng"]))
+
+    latitude_delta = second_latitude - first_latitude
+    longitude_delta = second_longitude - first_longitude
+    value = (
+        math.sin(latitude_delta / 2) ** 2
+        + math.cos(first_latitude)
+        * math.cos(second_latitude)
+        * math.sin(longitude_delta / 2) ** 2
+    )
+    return 6371 * 2 * math.atan2(math.sqrt(value), math.sqrt(1 - value))
+
+
+def _has_coordinates(place: dict) -> bool:
+    try:
+        float(place["lat"])
+        float(place["lng"])
+        return True
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def search_chat_places(
+    query: str,
+    previous_place_ids: list[str] | None = None,
+    limit: int = 3,
+) -> list[dict]:
+    """현재 질문과 직전 추천 장소를 이용해 챗봇용 검색 결과를 만든다."""
+    places = load_places()
+
+    if not any(word in query for word in PROXIMITY_WORDS):
+        return search_places(query, limit)
+
+    target_type = _detect_type(query)
+    mentioned_places = [
+        place
+        for place in places
+        if len(place["title"]) >= 2 and place["title"] in query
+    ]
+
+    if mentioned_places:
+        anchors = mentioned_places
+    else:
+        previous_ids = set(previous_place_ids or [])
+        anchors = [place for place in places if place["id"] in previous_ids]
+
+    anchors = [place for place in anchors if _has_coordinates(place)]
+
+    if not anchors or not target_type:
+        return search_places(query, limit)
+
+    targets = [
+        place
+        for place in places
+        if place["type"] == target_type
+        and place["id"] not in {anchor["id"] for anchor in anchors}
+        and _has_coordinates(place)
+    ]
+
+    if not targets:
+        return search_places(query, limit)
+
+    # 특정 장소 하나에서 가까운 장소를 묻는 경우: 가까운 대상 장소를 반환한다.
+    if len(anchors) == 1 and anchors[0]["type"] != target_type:
+        anchor = anchors[0]
+        ranked_targets = sorted(
+            targets,
+            key=lambda place: _distance_km(anchor, place),
+        )[:limit]
+
+        return [
+            {
+                **place,
+                "reference_title": anchor["title"],
+                "distance_km": round(_distance_km(anchor, place), 1),
+            }
+            for place in ranked_targets
+        ]
+
+    # "그중에서"처럼 여러 추천지 중 비교하는 경우: 가장 가까운 대상과의 거리로 정렬한다.
+    ranked_anchors = []
+    for anchor in anchors:
+        nearest_target = min(
+            targets,
+            key=lambda place: _distance_km(anchor, place),
+        )
+        ranked_anchors.append(
+            {
+                **anchor,
+                "nearest_title": nearest_target["title"],
+                "distance_km": round(_distance_km(anchor, nearest_target), 1),
+            }
+        )
+
+    ranked_anchors.sort(key=lambda place: place["distance_km"])
+    return ranked_anchors[:limit]
+
+
 def format_context(places: list[dict]) -> str:
     """검색된 장소들을 프롬프트에 넣을 텍스트로 변환."""
     if not places:
@@ -159,5 +264,15 @@ def format_context(places: list[dict]) -> str:
         line = f"- {p['title']} ({p['type']})"
         if p["addr"]:
             line += f" / 주소: {p['addr']}"
+        if p.get("reference_title"):
+            line += (
+                f" / {p['reference_title']}에서 직선거리: "
+                f"약 {p['distance_km']}km"
+            )
+        if p.get("nearest_title"):
+            line += (
+                f" / 가장 가까운 장소: {p['nearest_title']}"
+                f" / 직선거리: 약 {p['distance_km']}km"
+            )
         lines.append(line)
     return "\n".join(lines)
