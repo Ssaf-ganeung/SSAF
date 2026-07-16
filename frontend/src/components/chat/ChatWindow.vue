@@ -23,7 +23,8 @@ watch(
   <div ref="scrollRef" class="chat-window">
     <!-- 대화가 없을 때 안내 -->
     <p v-if="chatStore.messages.length === 0" class="chat-window__empty">
-      안녕하세요! 대전·충청권 지역 정보를 물어보세요. 🗺️
+      안녕하세요!<br />
+      대전·충청권 지역 정보를 물어보세요. 🗺️
     </p>
 
     <ChatMessage

@@ -53,14 +53,14 @@ function submit() {
   padding: 8px 16px;
   border: none;
   border-radius: 20px;
-  background: #2f6fed;
+  background: #408a5c;
   color: #fff;
   font-size: 14px;
   cursor: pointer;
 }
 
 .chat-input button:disabled {
-  background: #a9c0f5;
+  background: #a8cdb6;
   cursor: not-allowed;
 }
 </style>
