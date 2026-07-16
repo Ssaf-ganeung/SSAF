@@ -1,8 +1,12 @@
-<script setup></script>
+<script setup>
+import MascotWalker from './MascotWalker.vue'
+</script>
 
 <template>
   <header class="app-header">
     <div class="app-header__inner">
+      <MascotWalker />
+
       <div class="app-header__brand">
         <RouterLink to="/" class="app-header__logo">LocalHub</RouterLink>
         <span class="app-header__region">대전·충청</span>
@@ -53,6 +57,7 @@
 }
 
 .app-header__inner {
+  position: relative; /* 마스코트를 이 영역 기준으로 배치 */
   max-width: 1080px;
   height: 100%;
   margin: 0 auto;
@@ -63,6 +68,8 @@
 }
 
 .app-header__brand {
+  position: relative;
+  z-index: 1; /* 마스코트가 로고 뒤로 지나가도록 */
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -81,6 +88,8 @@
 }
 
 .app-header__nav {
+  position: relative;
+  z-index: 1; /* 마스코트가 메뉴 뒤로 지나가도록 */
   display: flex;
   align-items: center;
   gap: 24px;
