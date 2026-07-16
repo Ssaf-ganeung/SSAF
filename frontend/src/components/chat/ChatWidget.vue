@@ -1,11 +1,52 @@
 <script setup>
+import { onBeforeUnmount, ref } from 'vue'
 import { useChatStore } from '../../stores/chat'
 import ChatWindow from './ChatWindow.vue'
 import ChatInput from './ChatInput.vue'
 import { sendChatMessage } from '../../api/chat'
 import mascot from '../../assets/chatbot-mascot.png'
+import peekRobot from '../../assets/chatbot-peek.png'
 
 const chatStore = useChatStore()
+
+// 패널 크기. ChatWidget은 열고 닫아도 언마운트되지 않으므로 조절한 크기가 유지된다.
+const MIN_W = 300
+const MIN_H = 380
+const MAX_W = 560
+const panelW = ref(360)
+const panelH = ref(520)
+
+let startX = 0
+let startY = 0
+let startW = 0
+let startH = 0
+
+function clamp(value, lo, hi) {
+  return Math.min(hi, Math.max(lo, value))
+}
+
+function onResizeStart(event) {
+  startX = event.clientX
+  startY = event.clientY
+  startW = panelW.value
+  startH = panelH.value
+  window.addEventListener('pointermove', onResizeMove)
+  window.addEventListener('pointerup', onResizeEnd)
+  event.preventDefault() // 드래그 중 텍스트 선택 방지
+}
+
+function onResizeMove(event) {
+  // 패널이 우하단에 고정이라, 좌상단 손잡이를 왼쪽·위로 끌수록 커진다.
+  panelW.value = clamp(startW + (startX - event.clientX), MIN_W, MAX_W)
+  panelH.value = clamp(startH + (startY - event.clientY), MIN_H, window.innerHeight - 48)
+}
+
+function onResizeEnd() {
+  window.removeEventListener('pointermove', onResizeMove)
+  window.removeEventListener('pointerup', onResizeEnd)
+}
+
+onBeforeUnmount(onResizeEnd)
 
 async function handleSend(text) {
   chatStore.addMessage('user', text)
@@ -37,15 +78,29 @@ async function handleSend(text) {
     </button>
 
     <!-- 펼친 상태: 대화 패널 -->
-    <div v-else class="chat-widget__panel">
-      <header class="chat-widget__header">
-        <span>대·충 봇</span>
-        <button class="chat-widget__close" aria-label="챗봇 닫기" @click="chatStore.toggle">
-          ✕
-        </button>
-      </header>
-      <ChatWindow />
-      <ChatInput :disabled="chatStore.isLoading" @send="handleSend" />
+    <div v-else class="chat-widget__dock">
+      <!-- 패널 뒤에서 위로 삐져나와, 벽에 걸친 것처럼 가슴까지만 보인다 -->
+      <img :src="peekRobot" alt="" class="chat-widget__robot" aria-hidden="true" />
+
+      <div
+        class="chat-widget__panel"
+        :style="{ '--panel-w': panelW + 'px', '--panel-h': panelH + 'px' }"
+      >
+        <span
+          class="chat-widget__resize"
+          aria-hidden="true"
+          @pointerdown="onResizeStart"
+        ></span>
+
+        <header class="chat-widget__header">
+          <span>대·충 봇</span>
+          <button class="chat-widget__close" aria-label="챗봇 닫기" @click="chatStore.toggle">
+            ✕
+          </button>
+        </header>
+        <ChatWindow />
+        <ChatInput :disabled="chatStore.isLoading" @send="handleSend" />
+      </div>
     </div>
   </div>
 </template>
@@ -85,12 +140,18 @@ async function handleSend(text) {
   filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.18));
 }
 
-.chat-widget__panel {
+.chat-widget__dock {
   position: fixed;
   right: 24px;
   bottom: 24px;
-  width: 360px;
-  height: 520px;
+  z-index: 1000;
+}
+
+.chat-widget__panel {
+  position: relative;
+  z-index: 1; /* 로봇의 아랫부분을 가려 '벽에 걸친' 모양을 만든다 */
+  width: var(--panel-w);
+  height: var(--panel-h);
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -98,7 +159,43 @@ async function handleSend(text) {
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
   overflow: hidden;
-  z-index: 1000;
+}
+
+/* 로봇: 패널 뒤(z-index 0)에 두고 아래쪽 일부를 패널에 걸쳐 가린다 */
+.chat-widget__robot {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  /* 이미지 높이의 약 25%가 패널에 가려져 가슴선에서 잘린다 (130px * 0.25) */
+  bottom: calc(100% - 32px);
+  width: 141px; /* 원본 304x280 비율 유지 -> 높이 약 130px */
+  transform: translateX(-50%);
+  pointer-events: none;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.18));
+}
+
+/* 좌상단 크기 조절 손잡이 (패널이 우하단 고정이라 반대편 모서리를 잡는다) */
+.chat-widget__resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.chat-widget__resize::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid rgba(255, 255, 255, 0.7);
+  border-left: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 1px;
 }
 
 .chat-widget__header {
@@ -120,15 +217,23 @@ async function handleSend(text) {
   cursor: pointer;
 }
 
-/* 모바일: 전체 화면으로 */
+/* 모바일: 전체 화면으로. 크기 조절과 로봇은 공간이 없어 뺀다. */
 @media (max-width: 480px) {
-  .chat-widget__panel {
+  .chat-widget__dock {
     right: 0;
     bottom: 0;
+  }
+
+  .chat-widget__panel {
     width: 100vw;
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
+  }
+
+  .chat-widget__robot,
+  .chat-widget__resize {
+    display: none;
   }
 }
 </style>
