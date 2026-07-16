@@ -4,6 +4,7 @@ from openai import OpenAI
 from app.core.config import settings
 from app.schemas.chat import ChatMessage
 from app.services.place_data import format_context, resolve_intent, search_places
+from app.services.post_search import format_post_context, has_post_intent, search_posts
 
 # OpenAI에 보낼 대화 히스토리 최대 길이 (토큰/비용 폭주 방지)
 MAX_HISTORY = 12
@@ -41,23 +42,50 @@ def _get_client() -> OpenAI:
 
 
 def _build_system_prompt(message: str) -> str:
-    """질문과 관련된 실제 장소를 검색해 시스템 프롬프트에 근거로 덧붙인다(RAG)."""
-    places = search_places(message)
-    context = format_context(places)
-    if not context:
+    """질문과 관련된 실제 장소·커뮤니티 게시글을 검색해 근거로 덧붙인다(RAG)."""
+    place_context = format_context(search_places(message))
+
+    # 게시글은 물어봤을 때만 붙인다. 장소 질문에 게시글이 섞이면 답이 흐려진다.
+    post_context = ""
+    if has_post_intent(message):
+        post_context = format_post_context(search_posts(message))
+
+    if not place_context and not post_context:
         return SYSTEM_PROMPT
-    return (
-        f"{SYSTEM_PROMPT}\n\n"
-        "다음은 사용자 질문과 관련된 대전·충청권의 실제 장소 목록(Context)입니다.\n"
-        "- 반드시 이 Context 안의 데이터만 사용하세요. "
-        "목록에 없는 장소나 숙소는 추천하지 마세요.\n"
-        "- 추천은 최대 3개까지만 하세요.\n"
-        "- 추천 이유는 한 줄씩만 쓰세요.\n"
-        "- 사용자가 '그중', '주변 관광지'처럼 되물으면 새로운 숙소를 추천하지 말고, "
-        "앞서 고른 숙소를 기준으로 Context 안의 관광지만 설명하세요.\n"
-        "- 관련 정보가 부족하면 솔직히 없다고 답하세요.\n"
-        f"{context}"
-    )
+
+    sections = [SYSTEM_PROMPT, ""]
+
+    if place_context:
+        sections.append(
+            "다음은 사용자 질문과 관련된 대전·충청권의 실제 장소 목록(Context)입니다.\n"
+            "- 반드시 이 Context 안의 데이터만 사용하세요. "
+            "목록에 없는 장소나 숙소는 추천하지 마세요.\n"
+            "- 추천은 최대 3개까지만 하세요.\n"
+            "- 추천 이유는 한 줄씩만 쓰세요.\n"
+            "- 사용자가 '그중', '주변 관광지'처럼 되물으면 새로운 숙소를 추천하지 말고, "
+            "앞서 고른 숙소를 기준으로 Context 안의 관광지만 설명하세요.\n"
+            "- 관련 정보가 부족하면 솔직히 없다고 답하세요.\n"
+            f"{place_context}"
+        )
+
+    if post_context:
+        sections.append(
+            "다음은 사용자 질문과 관련된 커뮤니티 게시글 목록입니다. "
+            "형식은 '[번호] 제목 (카테고리, 작성일) — 본문 일부' 입니다.\n"
+            "- 게시글을 물어보면 이 목록만 근거로 답하고, 없는 글은 지어내지 마세요.\n"
+            "- 제목과 함께 몇 번 글인지 번호를 알려주세요.\n"
+            "- 최대 3개까지만 소개하세요.\n"
+            "- 검색된 글이 없으면 아직 관련 게시글이 없다고 솔직히 답하세요.\n"
+            f"{post_context}"
+        )
+    elif has_post_intent(message):
+        # 검색은 했는데 결과가 0건인 경우. 이 말이 없으면 모델이 글을 지어낸다.
+        sections.append(
+            "사용자가 커뮤니티 게시글을 물었지만 검색 결과가 없습니다. "
+            "관련 게시글이 아직 없다고 솔직히 답하세요. 게시글을 지어내지 마세요."
+        )
+
+    return "\n\n".join(sections)
 
 
 def generate_reply(
