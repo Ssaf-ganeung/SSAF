@@ -1,0 +1,3 @@
+# SPA 폴백: 어떤 경로로 들어와도 index.html을 주고 라우팅은 vue-router가 맡는다.
+# 이게 없으면 /community/389 로 직접 들어가거나 새로고침할 때 Netlify가 404를 낸다.
+/*  /index.html  200
