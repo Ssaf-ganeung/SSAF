@@ -181,6 +181,11 @@ MapFilter
 → WebP Marker / Popup
 → select-place event
 → PlaceDetailPanel
+
+ChatMessage 관련 장소 링크
+→ /map?place_id={id}&content_type_id={type}
+→ MapView URL 쿼리 장소 선택
+→ LeafletMap Marker 확대 및 Popup 열기
 ```
 
 ### `MapView.vue`
@@ -194,6 +199,7 @@ MapFilter
 - 연속 요청의 응답 순서가 뒤바뀌지 않도록 요청 sequence 관리
 - Marker에서 전달받은 선택 장소 상태 관리
 - 필터 결과에서 선택 장소가 제외되면 상세 패널 닫기
+- URL의 `place_id`, `content_type_id`로 챗봇 관련 장소 조회 및 선택
 
 ### `MapFilter.vue`
 
@@ -211,6 +217,7 @@ MapFilter
 - 컴포넌트 해제 시 Leaflet map 인스턴스 정리
 - Marker 클릭 Popup 렌더링
 - Marker 클릭 시 `select-place` 이벤트 전달
+- 선택 장소 Marker로 지도 중심 이동 및 Popup 열기
 
 Popup 문자열은 HTML 문자열 결합 대신 DOM `textContent`를 사용한다. 이미지 로딩에 실패하면 이미지 요소만 제거한다.
 

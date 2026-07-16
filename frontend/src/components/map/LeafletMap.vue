@@ -10,6 +10,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  selectedPlace: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(["select-place"]);
@@ -28,6 +32,11 @@ const mapContainer = ref(null);
 
 let map = null;
 let markerLayer = null;
+const markersByPlaceKey = new Map();
+
+function createPlaceKey(place) {
+  return `${place.content_type_id}:${place.id}`;
+}
 
 function getMarkerIcon(contentTypeId) {
   return PLACE_ICONS[contentTypeId] ?? FALLBACK_ICON;
@@ -106,6 +115,7 @@ function renderMarkers() {
   }
 
   markerLayer.clearLayers();
+  markersByPlaceKey.clear();
 
   const bounds = [];
 
@@ -135,6 +145,7 @@ function renderMarkers() {
     });
 
     marker.addTo(markerLayer);
+    markersByPlaceKey.set(createPlaceKey(place), marker);
 
     bounds.push([latitude, longitude]);
   });
@@ -144,10 +155,31 @@ function renderMarkers() {
     return;
   }
 
+  if (focusSelectedPlace()) {
+    return;
+  }
+
   map.fitBounds(bounds, {
     padding: [30, 30],
     maxZoom: MAX_FIT_ZOOM,
   });
+}
+
+function focusSelectedPlace() {
+  if (!map || !props.selectedPlace) {
+    return false;
+  }
+
+  const marker = markersByPlaceKey.get(createPlaceKey(props.selectedPlace));
+
+  if (!marker) {
+    return false;
+  }
+
+  map.setView(marker.getLatLng(), MAX_FIT_ZOOM);
+  marker.openPopup();
+
+  return true;
 }
 
 onMounted(() => {
@@ -167,6 +199,7 @@ onMounted(() => {
 });
 
 watch(() => props.places, renderMarkers);
+watch(() => props.selectedPlace, focusSelectedPlace);
 
 onUnmounted(() => {
   if (map) {
