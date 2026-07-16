@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia'
+import { defineStore } from "pinia";
 
-export const useChatStore = defineStore('chat', {
+export const useChatStore = defineStore("chat", {
   state: () => ({
     isOpen: false,
     isLoading: false, // 답변 생성 대기 중 여부
@@ -8,13 +8,32 @@ export const useChatStore = defineStore('chat', {
   }),
   actions: {
     toggle() {
-      this.isOpen = !this.isOpen
+      this.isOpen = !this.isOpen;
     },
-    addMessage(role, content) {
-      this.messages.push({ role, content })
+    addMessage(role, content, relatedPlaces = []) {
+      this.messages.push({
+        role,
+        content,
+        relatedPlaces,
+      });
     },
     setLoading(value) {
-      this.isLoading = value
+      this.isLoading = value;
+    },
+    appendToLastAssistantMessage(content) {
+      const lastMessage = this.messages[this.messages.length - 1];
+
+      if (lastMessage?.role === "assistant") {
+        lastMessage.content += content;
+      }
+    },
+
+    setLastAssistantRelatedPlaces(relatedPlaces) {
+      const lastMessage = this.messages[this.messages.length - 1];
+
+      if (lastMessage?.role === "assistant") {
+        lastMessage.relatedPlaces = relatedPlaces;
+      }
     },
   },
-})
+});
