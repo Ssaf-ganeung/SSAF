@@ -10,11 +10,34 @@
 
       <nav class="app-header__nav">
         <RouterLink to="/community" class="app-header__link">게시판</RouterLink>
-        <span class="app-header__link app-header__link--disabled" title="준비 중">지도</span>
-        <button type="button" class="app-header__search" aria-label="검색" disabled>
-          <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.5" />
-            <line x1="13.5" y1="13.5" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        <RouterLink to="/map" class="app-header__link">지도</RouterLink>
+        <button
+          type="button"
+          class="app-header__search"
+          aria-label="검색"
+          disabled
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="9"
+              cy="9"
+              r="6.5"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <line
+              x1="13.5"
+              y1="13.5"
+              x2="18"
+              y2="18"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
           </svg>
         </button>
       </nav>
