@@ -7,7 +7,7 @@ from app.schemas.chat import ChatMessage, ChatRequest, ChatResponse
 from app.services.chat_service import generate_reply, stream_reply
 from app.services.place_data import search_chat_places, search_places
 from app.services.place_service import detect_region, is_in_service_area
-from app.services.post_search import has_post_intent, search_posts
+from app.services.post_search import POST_LINK_LIMIT, has_post_intent, search_posts
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -82,7 +82,9 @@ def retrieve_posts(payload: ChatRequest) -> list[dict]:
             "title": post["title"],
             "category": post["category"],
         }
-        for post in search_posts(get_last_user_message(payload.messages), limit=3)
+        for post in search_posts(
+            get_last_user_message(payload.messages), limit=POST_LINK_LIMIT
+        )
     ]
 
 

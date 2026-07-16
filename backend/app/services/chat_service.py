@@ -4,7 +4,12 @@ from openai import OpenAI
 from app.core.config import settings
 from app.schemas.chat import ChatMessage
 from app.services.place_data import format_context, resolve_intent, search_places
-from app.services.post_search import format_post_context, has_post_intent, search_posts
+from app.services.post_search import (
+    POST_LINK_LIMIT,
+    format_post_context,
+    has_post_intent,
+    search_posts,
+)
 
 # OpenAI에 보낼 대화 히스토리 최대 길이 (토큰/비용 폭주 방지)
 MAX_HISTORY = 12
@@ -46,9 +51,11 @@ def _build_system_prompt(message: str) -> str:
     place_context = format_context(search_places(message))
 
     # 게시글은 물어봤을 때만 붙인다. 장소 질문에 게시글이 섞이면 답이 흐려진다.
+    # limit은 라우터가 링크로 내려보내는 개수(3)와 같아야 한다. 다르면 답변에서 언급한
+    # 글의 링크가 없거나, 링크에만 있고 답변에 없는 글이 생긴다.
     post_context = ""
     if has_post_intent(message):
-        post_context = format_post_context(search_posts(message))
+        post_context = format_post_context(search_posts(message, limit=POST_LINK_LIMIT))
 
     if not place_context and not post_context:
         return SYSTEM_PROMPT
