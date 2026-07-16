@@ -37,7 +37,6 @@ function createRequestParams() {
 }
 
 function selectPlace(place) {
-  console.log("선택된 장소:", place);
   selectedPlace.value = place;
 }
 
