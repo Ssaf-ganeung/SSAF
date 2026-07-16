@@ -106,7 +106,8 @@ async function handleSend(text) {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #2f6fed;
+  /* 토글 버튼 원과 같은 계열의 초록 (흰 글씨 대비 확보를 위해 불투명하게) */
+  background: #408a5c;
   color: #fff;
   font-weight: 600;
 }
