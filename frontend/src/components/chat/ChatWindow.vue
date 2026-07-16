@@ -4,20 +4,17 @@ import { useChatStore } from '../../stores/chat'
 import ChatMessage from './ChatMessage.vue'
 import FloatingFaces from './FloatingFaces.vue'
 
-const chatStore = useChatStore()
-const scrollRef = ref(null)
+const chatStore = useChatStore();
+const scrollRef = ref(null);
 
 // 새 메시지가 쌓이거나 로딩 상태가 바뀌면 맨 아래로 스크롤
 async function scrollToBottom() {
-  await nextTick() // DOM 갱신 후에 스크롤해야 정확함
-  const el = scrollRef.value
-  if (el) el.scrollTop = el.scrollHeight
+  await nextTick(); // DOM 갱신 후에 스크롤해야 정확함
+  const el = scrollRef.value;
+  if (el) el.scrollTop = el.scrollHeight;
 }
 
-watch(
-  () => [chatStore.messages.length, chatStore.isLoading],
-  scrollToBottom,
-)
+watch(() => [chatStore.messages.length, chatStore.isLoading], scrollToBottom);
 </script>
 
 <template>
@@ -35,10 +32,13 @@ watch(
       :key="index"
       :role="message.role"
       :content="message.content"
+      :related-places="message.relatedPlaces ?? []"
     />
 
     <!-- 답변 대기 중 표시 -->
-    <p v-if="chatStore.isLoading" class="chat-window__typing">대·충 봇이 입력 중…</p>
+    <p v-if="chatStore.isLoading" class="chat-window__typing">
+      대·충 봇이 입력 중…
+    </p>
   </div>
 </template>
 

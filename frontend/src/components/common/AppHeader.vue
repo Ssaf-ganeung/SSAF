@@ -15,6 +15,8 @@ import MascotWalker from './MascotWalker.vue'
       <nav class="app-header__nav">
         <RouterLink to="/community" class="app-header__link">게시판</RouterLink>
         <RouterLink to="/map" class="app-header__link">지도</RouterLink>
+        <RouterLink to="/bread-map" class="app-header__link">빵지순례</RouterLink>
+        <RouterLink to="/local-info" class="app-header__link">지역 정보</RouterLink>
         <button
           type="button"
           class="app-header__search"

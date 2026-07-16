@@ -13,7 +13,8 @@ DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 TYPE_HINTS = {
     "맛집": "음식점", "음식": "음식점", "식당": "음식점", "먹거리": "음식점",
     "축제": "축제공연행사", "행사": "축제공연행사", "공연": "축제공연행사",
-    "숙박": "숙박", "호텔": "숙박", "펜션": "숙박", "모텔": "숙박", "잘": "숙박",
+    "숙박": "숙박", "숙소": "숙박", "호텔": "숙박", "펜션": "숙박", "모텔": "숙박",
+    "리조트": "숙박", "게스트하우스": "숙박", "민박": "숙박", "한옥": "숙박", "잘": "숙박",
     "쇼핑": "쇼핑", "시장": "쇼핑", "마트": "쇼핑",
     "레포츠": "레포츠", "체험": "레포츠", "액티비티": "레포츠",
     "문화": "문화시설", "박물관": "문화시설", "미술관": "문화시설", "전시": "문화시설",
@@ -53,6 +54,8 @@ def load_places() -> list[dict]:
         content_type = raw.get("contentType", "")
         for item in raw.get("items", []):
             places.append({
+                "id": str(item.get("contentid", "")),
+                "content_type_id": str(item.get("contenttypeid", "")),
                 "title": item.get("title", ""),
                 "type": content_type,
                 "addr": item.get("addr1", ""),

@@ -53,9 +53,14 @@ def _build_system_prompt(message: str, recent_user_texts: list[str]) -> str:
         return SYSTEM_PROMPT
     return (
         f"{SYSTEM_PROMPT}\n\n"
-        "다음은 사용자 질문과 관련된 대전·충청권의 실제 장소 목록입니다. "
-        "반드시 이 목록을 근거로 답하고, 목록에 없는 장소는 지어내지 마세요. "
-        "관련 정보가 부족하면 솔직히 없다고 답하세요.\n"
+        "다음은 사용자 질문과 관련된 대전·충청권의 실제 장소 목록(Context)입니다.\n"
+        "- 반드시 이 Context 안의 데이터만 사용하세요. "
+        "목록에 없는 장소나 숙소는 추천하지 마세요.\n"
+        "- 추천은 최대 3개까지만 하세요.\n"
+        "- 추천 이유는 한 줄씩만 쓰세요.\n"
+        "- 사용자가 '그중', '주변 관광지'처럼 되물으면 새로운 숙소를 추천하지 말고, "
+        "앞서 고른 숙소를 기준으로 Context 안의 관광지만 설명하세요.\n"
+        "- 관련 정보가 부족하면 솔직히 없다고 답하세요.\n"
         f"{context}"
     )
 
@@ -84,3 +89,51 @@ def generate_reply(messages: list[ChatMessage]) -> str:
     except Exception as exc:  # 네트워크/키/쿼터 오류 등
         print(f"[chat_service] OpenAI 호출 실패: {exc}")
         return "죄송해요, 지금 답변을 생성하지 못했어요. 잠시 후 다시 시도해 주세요."
+
+def stream_reply(messages: list[ChatMessage]):
+    if not settings.OPENAI_API_KEY:
+        yield "(OpenAI API 키가 없습니다.)"
+        return
+
+    if not messages:
+        yield "무엇이 궁금하신가요?"
+        return
+
+    # 검색(RAG)은 최근 사용자 메시지 기준. 유형·지역 힌트는 직전 질문들에서 물려받는다.
+    recent_user_texts = [
+        message.content for message in reversed(messages) if message.role == "user"
+    ][:3]
+    last_user = recent_user_texts[0] if recent_user_texts else ""
+
+    system_prompt = _build_system_prompt(last_user, recent_user_texts)
+
+    history = [
+        {
+            "role": message.role,
+            "content": message.content,
+        }
+        for message in messages[-MAX_HISTORY:]
+    ]
+
+    try:
+        stream = _get_client().chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                *history,
+            ],
+            stream=True,
+        )
+
+        for chunk in stream:
+            content = chunk.choices[0].delta.content
+
+            if content:
+                yield content
+
+    except Exception as exc:
+        print(f"[chat_service] OpenAI 스트리밍 실패: {exc}")
+        yield "죄송해요, 지금 답변을 생성하지 못했어요."

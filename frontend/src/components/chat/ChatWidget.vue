@@ -3,11 +3,11 @@ import { onBeforeUnmount, ref } from 'vue'
 import { useChatStore } from '../../stores/chat'
 import ChatWindow from './ChatWindow.vue'
 import ChatInput from './ChatInput.vue'
-import { sendChatMessage } from '../../api/chat'
+import { streamChatMessage } from '../../api/chat'
 import mascot from '../../assets/chatbot-mascot.png'
 import peekRobot from '../../assets/chatbot-peek.png'
 
-const chatStore = useChatStore()
+const chatStore = useChatStore();
 
 // 패널 크기. ChatWidget은 열고 닫아도 언마운트되지 않으므로 조절한 크기가 유지된다.
 const MIN_W = 300
@@ -49,18 +49,34 @@ function onResizeEnd() {
 onBeforeUnmount(onResizeEnd)
 
 async function handleSend(text) {
-  chatStore.addMessage('user', text)
-  chatStore.setLoading(true)
+  chatStore.addMessage("user", text);
+
+  const requestMessages = chatStore.messages.map(({ role, content }) => ({
+    role,
+    content,
+  }));
+
+  chatStore.addMessage("assistant", "", []);
+  chatStore.setLoading(true);
+
   try {
-    // 방금 추가한 사용자 메시지를 포함한 대화 전체를 전송(맥락 유지)
-    const response = await sendChatMessage(chatStore.messages)
-    chatStore.addMessage('assistant', response.data?.reply ?? '')
-  } catch (err) {
-    // 네트워크 오류/서버 다운 등 → 대화창에 안내 표시
-    console.error('[chat] 전송 실패:', err)
-    chatStore.addMessage('assistant', '⚠️ 답변을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.')
+    await streamChatMessage(requestMessages, {
+      onPlaces(relatedPlaces) {
+        chatStore.setLastAssistantRelatedPlaces(relatedPlaces);
+      },
+
+      onDelta(content) {
+        chatStore.appendToLastAssistantMessage(content);
+      },
+    });
+  } catch (error) {
+    console.error("[chat] 스트리밍 실패:", error);
+
+    chatStore.appendToLastAssistantMessage(
+      "⚠️ 답변을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.",
+    );
   } finally {
-    chatStore.setLoading(false)
+    chatStore.setLoading(false);
   }
 }
 </script>
@@ -120,8 +136,10 @@ async function handleSend(text) {
 
   cursor: pointer;
   z-index: 1000;
-  box-shadow: 0 8px 22px rgba(0, 67, 70, 0.28); 
-  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 8px 22px rgba(0, 67, 70, 0.28);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
