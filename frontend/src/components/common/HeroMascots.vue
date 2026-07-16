@@ -11,20 +11,20 @@ import nev from '../../assets/Daejeon_mascots/nev.png'
 // ease: 목표 지점까지 매 프레임 좁히는 비율 = 따라오는 속도.
 // 꿈돌이가 가장 커서 제일 먼저 출발하고, 뒤로 갈수록 느려져 뒤따라 모여든다.
 const mascots = [
-  { src: ggumdori, name: '꿈돌이', ease: 0.14 },
-  { src: first, name: '첫째', ease: 0.07 },
-  { src: second, name: '둘째', ease: 0.055 },
-  { src: third, name: '셋째', ease: 0.042 },
-  { src: maknaeng, name: '막냉이', ease: 0.032 },
-  { src: ganadi, name: '가나디', ease: 0.024 },
-  { src: nev, name: '네브', ease: 0.018 },
+  { src: ggumdori, name: '꿈돌이', ease: 0.101 },
+  { src: first, name: '첫째', ease: 0.05 },
+  { src: second, name: '둘째', ease: 0.04 },
+  { src: third, name: '셋째', ease: 0.031 },
+  { src: maknaeng, name: '막냉이', ease: 0.023 },
+  { src: ganadi, name: '가나디', ease: 0.017 },
+  { src: nev, name: '네브', ease: 0.013 },
 ]
 
 // 커서 쪽으로 얼마나 모여드는지. 1이면 커서 자리까지 그대로 간다.
 const FOLLOW = 1
 
 // 서로 겹쳐도 되는 한도. 중심 사이 거리를 (두 폭의 평균 × 0.8) 이상으로 유지 → 최대 20% 겹침.
-const OVERLAP = 0.8
+const OVERLAP = 0.9
 
 const rootRef = ref(null)
 const itemEls = []
